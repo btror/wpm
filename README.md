@@ -12,18 +12,23 @@ Add `wpm` to the `plugins` array in your `.zshrc` file:
 plugins=(... wpm)
 ```
 
-Make sure ZSH_CUSTOM is set:
+Make sure `ZSH_CUSTOM` is set:
 ```
 ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
 ```
 
 ### Required Packages
-`sudo apt install jq`
+```
+sudo apt install jq
+```
 
 ## Usage
 
 ### Functions
-Start a speed test via `wpm_test <seconds>`
+Start a speed test via:
+```
+wpm_test <seconds>
+```
 
 ### Example
 Select a word list txt file in the `lists` folder to use.
