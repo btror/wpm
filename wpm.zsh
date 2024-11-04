@@ -125,10 +125,20 @@ generate_word_list() {
 }
 
 display_state() {
-    local is_correct="$1"
-    clear
+    local is_correct="${1}"
 
-    if [[ -n $is_correct && $current_word_index -gt 1 ]]; then
+    if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
+        clear
+
+        word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
+
+        draw_separator "$typing_table_width" "" ""
+        draw_new_line "$typing_table_width" "$word_list_top" "" "center" ""
+        draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" ""
+        draw_separator "$typing_table_width" "" ""
+    elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
+        clear
+
         index=$((current_word_index - 1))
         word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
 
@@ -137,15 +147,16 @@ display_state() {
         elif [[ $is_correct -eq 1 ]]; then
             word_list_top[$index]=$'\e[31m'"${word_list_top[index]}"$'\e[0m'
         fi
+
+        word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
+
+        draw_separator "$typing_table_width" "" ""
+        draw_new_line "$typing_table_width" "$word_list_top" "" "center" ""
+        draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" ""
+        draw_separator "$typing_table_width" "" ""
     fi
 
-    word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-
-    draw_separator "$typing_table_width" "" ""
-    draw_new_line "$typing_table_width" "$word_list_top" "" "center" ""
-    draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" ""
-    draw_separator "$typing_table_width" "" ""
-
+    printf "\r\033[K"
     printf "$prompt_char $user_input"
 }
 
@@ -163,11 +174,12 @@ total_keystrokes=0
 
 tput civis # Hide cursor
 
-display_state
+display_state 0
 
 # Main loop
 while [ $(date +%s) -lt $end_time ]; do
     remaining_time=$((end_time - $(date +%s)))
+
     read -t $remaining_time -k 1 char || break
 
     total_keystrokes=$((total_keystrokes + 1)) # Increment for every keystroke
