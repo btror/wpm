@@ -27,6 +27,10 @@ sudo apt install jq
 ### Functions
 Start a speed test via:
 ```
+wpm_test
+```
+You can set a timer if you want (default is 60):
+```
 wpm_test <seconds>
 ```
 
