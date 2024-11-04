@@ -44,7 +44,7 @@ Select a word list txt file in the `lists` folder to use.
 Select (1-3):
 ```
 
-Random words are pulled from the list until the timer stops. Correctly typed words are turn green and incorrect ones turn red.
+Random words are pulled from the list until the timer stops. Correctly typed words turn green and incorrect ones turn red.
 ```
 ────────────────────────────────────────────────────────────────────────────────────────────────────
                        height easy branch short day about piece own bus side                        
