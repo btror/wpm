@@ -242,7 +242,7 @@ if ! command -v jq &>/dev/null; then # Check if jq is available
     sleep 2
 fi
 
-current_date=$(date +"%m/%d/%Y %l:%M%p")
+current_date=$(date +"%m/%d/%Y%l:%M%p")
 new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"wpm\":$wpm,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 mkdir -p "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats"
 stats=$(load_stats)
