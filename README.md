@@ -50,7 +50,7 @@ Random words are pulled from the list until the timer stops. Correctly typed wor
                        height easy branch short day about piece own bus side                        
                          you young large easy about dog home ball rich blue                         
 ────────────────────────────────────────────────────────────────────────────────────────────────────
-> heig
+> heigh
 ```
 
 Results are displayed in a table when the timer runs out.
