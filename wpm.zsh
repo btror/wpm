@@ -26,7 +26,7 @@ draw_bottom_border() {
 
 draw_separator() {
     local width="$1"
-    local separator_char="${2:-─}" # default is '─'
+    local separator_char="${2:-─}"      # default is '─'
     local vertical_border_char="${3:-}" # default is empty
 
     if [[ "$separator_char" == "═" ]]; then
@@ -38,9 +38,9 @@ draw_separator() {
 
 draw_new_line() {
     local width="$1"
-    local label="${2:-}" # default is empty
-    local value="${3:-}" # default is empty
-    local align="${4:-}" # center, left, or right
+    local label="${2:-}"       # default is empty
+    local value="${3:-}"       # default is empty
+    local align="${4:-}"       # center, left, or right
     local border_char="${5:-}" # default is empty
 
     if [[ "$align" == "center" ]]; then
@@ -57,8 +57,8 @@ center_align() {
     local label="$2"
     local border_char="$3"
     local clean_label=$(printf '%b' "$label" | sed 's/\x1b\[[0-9;]*m//g')
-    local padding_left=$(( (width - ${#clean_label}) / 2 ))
-    local padding_right=$(( width - ${#clean_label} - padding_left ))
+    local padding_left=$(((width - ${#clean_label}) / 2))
+    local padding_right=$((width - ${#clean_label} - padding_left))
     printf "$border_char%${padding_left}s%s%${padding_right}s$border_char\n" "" "$label" ""
 }
 
@@ -111,7 +111,7 @@ select_word_list
 
 # Typing test functions
 generate_random_word() {
-    local random_index=$(( ( $(od -An -N2 -i /dev/urandom) % (${#words[@]}) ) + 1 ))
+    local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
     printf "%s\n" "${words[$random_index]}"
 }
 
@@ -150,7 +150,7 @@ display_state() {
 }
 
 start_time=$(date +%s)
-end_time=$(( start_time + test_duration ))
+end_time=$((start_time + test_duration))
 words=($(cat "$(dirname "$_omz_wpm_plugin_dir")/wpm/lists/$word_list_file_name"))
 word_list=($(generate_word_list 20))
 word_list_top=("${word_list[@]:0:10}")
@@ -167,13 +167,13 @@ display_state
 
 # Main loop
 while [ $(date +%s) -lt $end_time ]; do
-    remaining_time=$(( end_time - $(date +%s) ))
+    remaining_time=$((end_time - $(date +%s)))
     read -t $remaining_time -k 1 char || break
 
     total_keystrokes=$((total_keystrokes + 1)) # Increment for every keystroke
 
-    if [[ "$char" == $'\177' ]]; then  # backspace keystroke
-        user_input=${user_input%?}  # remove last character
+    if [[ "$char" == $'\177' ]]; then # backspace keystroke
+        user_input=${user_input%?}    # remove last character
         display_state
     elif [[ "$char" == " " ]]; then # space keystroke
         is_correct=1
@@ -201,12 +201,12 @@ while [ $(date +%s) -lt $end_time ]; do
     fi
 done
 
-elapsed_time=$(( end_time - start_time ))
-total_words=$(( correct_words + incorrect_words ))
-wpm=$(( (correct_words * 60) / elapsed_time ))
+elapsed_time=$((end_time - start_time))
+total_words=$((correct_words + incorrect_words))
+wpm=$(((correct_words * 60) / elapsed_time))
 accuracy=0
 if [[ $total_words -gt 0 ]]; then
-    accuracy=$(( (correct_words * 100) / total_words ))
+    accuracy=$(((correct_words * 100) / total_words))
 fi
 
 # Store test results
@@ -221,10 +221,10 @@ load_stats() {
 save_stats() {
     local data="$1"
     mkdir -p "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats"
-    printf "%s" "$data" > "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json"
+    printf "%s" "$data" >"$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json"
 }
 
-if ! command -v jq &> /dev/null; then # Check if jq is available
+if ! command -v jq &>/dev/null; then # Check if jq is available
     printf "Warning: jq not found. Please install jq for better JSON handling.\n"
     printf "Installing jq is recommended: sudo apt install jq (Ubuntu/Debian) or brew install jq (macOS)\n"
     sleep 2
@@ -235,7 +235,7 @@ new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_dura
 mkdir -p "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats"
 stats=$(load_stats)
 
-if command -v jq &> /dev/null; then
+if command -v jq &>/dev/null; then
     if jq -e . >/dev/null 2>&1 <<<"$stats"; then
         if jq -e ".\"$word_list_file_name\"" >/dev/null 2>&1 <<<"$stats"; then
             stats=$(jq --arg file "$word_list_file_name" --argjson entry "$new_entry" \
@@ -247,9 +247,9 @@ if command -v jq &> /dev/null; then
     else
         stats="{\"$word_list_file_name\": [$new_entry]}"
     fi
-    else
-        if [[ $stats == "{}" ]]; then
-            stats="{\"$word_list_file_name\": [$new_entry]}"
+else
+    if [[ $stats == "{}" ]]; then
+        stats="{\"$word_list_file_name\": [$new_entry]}"
     else
         stats=${stats%?}
         if [[ $stats == *"\"$word_list_file_name\""* ]]; then
@@ -264,7 +264,7 @@ save_stats "$stats"
 
 # Test run result table
 printf "\n"
-clear 
+clear
 
 draw_top_border "$result_table_width"
 draw_new_line "$result_table_width" "Result" "" "center" "$vertical_border_char"
