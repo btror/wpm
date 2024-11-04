@@ -10,7 +10,7 @@ header_separator_char="═"
 data_separator_char="─"
 vertical_border_char="║"
 _omz_wpm_plugin_dir=$1
-test_duration=$2 # 60
+test_duration=$2
 word_list_file_name="words_top-250-english-easy.txt"
 
 # Table drawing functions
@@ -80,7 +80,7 @@ right_align() {
     printf "$border_char  %-10s %$((width - 15))s  $border_char\n" "$clean_label" "$value"
 }
 
-# Add file selection menu
+# File selection menu
 select_word_list() {
     local files=()
     for file in "$(dirname "$_omz_wpm_plugin_dir")/wpm/lists"/*.txt; do
@@ -124,33 +124,31 @@ generate_word_list() {
     printf "%s\n" "${word_list[@]}"
 }
 
-# Function to display current state
 display_state() {
     local is_correct="$1"
     clear
 
     if [[ -n $is_correct && $current_word_index -gt 1 ]]; then
         index=$((current_word_index - 1))
-        word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g') # Remove existing highlights if any
+        word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
 
         if [[ $is_correct -eq 0 ]]; then
-            word_list_top[$index]=$'\e[32m'"${word_list_top[index]}"$'\e[0m' # Make previous word green if correct
+            word_list_top[$index]=$'\e[32m'"${word_list_top[index]}"$'\e[0m'
         elif [[ $is_correct -eq 1 ]]; then
-            word_list_top[$index]=$'\e[31m'"${word_list_top[index]}"$'\e[0m' # Make previous word red if incorrect
+            word_list_top[$index]=$'\e[31m'"${word_list_top[index]}"$'\e[0m'
         fi
     fi
 
-    word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m' # Highlight current word
+    word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
 
     draw_separator "$typing_table_width" "" ""
-    draw_new_line "$typing_table_width" "$word_list_top" "" "center" "" # Display the top line of words
-    draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" "" # Display the bottom line of words
+    draw_new_line "$typing_table_width" "$word_list_top" "" "center" ""
+    draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" ""
     draw_separator "$typing_table_width" "" ""
 
     printf "$prompt_char $user_input"
 }
 
-# Initialize variables
 start_time=$(date +%s)
 end_time=$(( start_time + test_duration ))
 words=($(cat "$(dirname "$_omz_wpm_plugin_dir")/wpm/lists/$word_list_file_name"))
@@ -172,7 +170,7 @@ while [ $(date +%s) -lt $end_time ]; do
     remaining_time=$(( end_time - $(date +%s) ))
     read -t $remaining_time -k 1 char || break
 
-    total_keystrokes=$((total_keystrokes + 1))  # Increment for every keystroke
+    total_keystrokes=$((total_keystrokes + 1)) # Increment for every keystroke
 
     if [[ "$char" == $'\177' ]]; then  # backspace keystroke
         user_input=${user_input%?}  # remove last character
@@ -203,7 +201,6 @@ while [ $(date +%s) -lt $end_time ]; do
     fi
 done
 
-# Calculate final statistics
 elapsed_time=$(( end_time - start_time ))
 total_words=$(( correct_words + incorrect_words ))
 wpm=$(( (correct_words * 60) / elapsed_time ))
@@ -212,7 +209,7 @@ if [[ $total_words -gt 0 ]]; then
     accuracy=$(( (correct_words * 100) / total_words ))
 fi
 
-# Replace the JSON handling section with:
+# Store test results
 load_stats() {
     if [ -f "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json" ]; then
         cat "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json"
@@ -227,42 +224,32 @@ save_stats() {
     printf "%s" "$data" > "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json"
 }
 
-# Check if jq is available
-if ! command -v jq &> /dev/null; then
+if ! command -v jq &> /dev/null; then # Check if jq is available
     printf "Warning: jq not found. Please install jq for better JSON handling.\n"
     printf "Installing jq is recommended: sudo apt install jq (Ubuntu/Debian) or brew install jq (macOS)\n"
     sleep 2
 fi
 
-# Generate new entry
 current_date=$(date +"%m/%d/%Y %l:%M%p")
 new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"wpm\":$wpm,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
-
-# Load existing stats
 mkdir -p "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats"
 stats=$(load_stats)
 
-# Replace the jq section with this fixed version:
 if command -v jq &> /dev/null; then
-    # Use jq for JSON manipulation
     if jq -e . >/dev/null 2>&1 <<<"$stats"; then
         if jq -e ".\"$word_list_file_name\"" >/dev/null 2>&1 <<<"$stats"; then
-            # Update existing array
             stats=$(jq --arg file "$word_list_file_name" --argjson entry "$new_entry" \
                 '.[$file] = [$entry] + .[$file]' <<<"$stats")
         else
-            # Create new array
             stats=$(jq --arg file "$word_list_file_name" --argjson entry "$new_entry" \
                 '. + {($file): [$entry]}' <<<"$stats")
         fi
     else
-        # Invalid JSON, create new
         stats="{\"$word_list_file_name\": [$new_entry]}"
     fi
     else
-    # Fallback to basic string manipulation if jq is not available
-    if [[ $stats == "{}" ]]; then
-        stats="{\"$word_list_file_name\": [$new_entry]}"
+        if [[ $stats == "{}" ]]; then
+            stats="{\"$word_list_file_name\": [$new_entry]}"
     else
         stats=${stats%?}
         if [[ $stats == *"\"$word_list_file_name\""* ]]; then
@@ -275,7 +262,7 @@ fi
 
 save_stats "$stats"
 
-# Render Result Table
+# Test run result table
 printf "\n"
 clear 
 
