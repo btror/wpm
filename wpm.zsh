@@ -52,6 +52,25 @@ draw_new_line() {
     fi
 }
 
+# TODO: replace other draw and center functions with this function
+draw_box() {
+    local width="$1"         # The outer box width
+    local content=("${@:2}") # Accepts an array of additional content lines after width argument
+    local box=""
+
+    box+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
+    for line in "${content[@]}"; do
+        local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
+        local padding_left=$(((width - ${#clean_line}) / 2))
+        local padding_right=$((width - ${#clean_line} - padding_left))
+        box+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
+    done
+    box+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
+
+    clear
+    printf "$box"
+}
+
 center_align() {
     local width="$1"
     local label="$2"
@@ -128,17 +147,9 @@ display_state() {
     local is_correct="${1}"
 
     if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
-        clear
-
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-
-        draw_separator "$typing_table_width" "" ""
-        draw_new_line "$typing_table_width" "$word_list_top" "" "center" ""
-        draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" ""
-        draw_separator "$typing_table_width" "" ""
+        draw_box "$typing_table_width" "$word_list_top" "$word_list_bottom"
     elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
-        clear
-
         index=$((current_word_index - 1))
         word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
 
@@ -149,11 +160,7 @@ display_state() {
         fi
 
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-
-        draw_separator "$typing_table_width" "" ""
-        draw_new_line "$typing_table_width" "$word_list_top" "" "center" ""
-        draw_new_line "$typing_table_width" "$word_list_bottom" "" "center" ""
-        draw_separator "$typing_table_width" "" ""
+        draw_box "$typing_table_width" "$word_list_top" "$word_list_bottom"
     fi
 
     printf "\r\033[K"
@@ -273,9 +280,6 @@ else
 fi
 
 save_stats "$stats"
-
-# Test run result table
-printf "\n"
 clear
 
 draw_top_border "$result_table_width"
