@@ -63,6 +63,7 @@ draw_box() {
         local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
         local padding_left=$(((width - ${#clean_line}) / 2))
         local padding_right=$((width - ${#clean_line} - padding_left))
+        line=$(echo "$line" | sed 's/%/%%/g') # Double any % symbols in line (% is a special character in printf)
         box+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
     done
     box+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
@@ -283,18 +284,19 @@ fi
 save_stats "$stats"
 clear
 
-# TODO: ew the fuck is this gross ass shit
-draw_top_border "$result_table_width"
-draw_new_line "$result_table_width" "Result" "" "center" "$vertical_border_char"
-draw_separator "$result_table_width" "$header_separator_char" "$vertical_border_char"
-draw_new_line "$result_table_width" "" "" "" "$vertical_border_char"
-draw_new_line "$result_table_width" "$wpm WPM" "" "center" "$vertical_border_char"
-draw_new_line "$result_table_width" "" "" "" "$vertical_border_char"
-draw_separator "$result_table_width" "$data_separator_char" "$vertical_border_char"
-draw_new_line "$result_table_width" "Keystrokes" "$total_keystrokes" "right" "$vertical_border_char"
-draw_new_line "$result_table_width" "Accuracy" "$accuracy%" "right" "$vertical_border_char"
-draw_new_line "$result_table_width" "Correct" "$correct_words" "right" "$vertical_border_char"
-draw_new_line "$result_table_width" "Incorrect" "$incorrect_words" "right" "$vertical_border_char"
-draw_separator "$result_table_width" "$data_separator_char" "$vertical_border_char"
-draw_new_line "$result_table_width" "$word_list_file_name" "" "center" "$vertical_border_char"
-draw_bottom_border "$result_table_width"
+draw_box "$result_table_width" "Result" "" "$wpm WPM" "" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "" "$word_list_file_name"
+
+# draw_top_border "$result_table_width"
+# draw_new_line "$result_table_width" "Result" "" "center" "$vertical_border_char"
+# draw_separator "$result_table_width" "$header_separator_char" "$vertical_border_char"
+# draw_new_line "$result_table_width" "" "" "" "$vertical_border_char"
+# draw_new_line "$result_table_width" "$wpm WPM" "" "center" "$vertical_border_char"
+# draw_new_line "$result_table_width" "" "" "" "$vertical_border_char"
+# draw_separator "$result_table_width" "$data_separator_char" "$vertical_border_char"
+# draw_new_line "$result_table_width" "Keystrokes" "$total_keystrokes" "right" "$vertical_border_char"
+# draw_new_line "$result_table_width" "Accuracy" "$accuracy%" "right" "$vertical_border_char"
+# draw_new_line "$result_table_width" "Correct" "$correct_words" "right" "$vertical_border_char"
+# draw_new_line "$result_table_width" "Incorrect" "$incorrect_words" "right" "$vertical_border_char"
+# draw_separator "$result_table_width" "$data_separator_char" "$vertical_border_char"
+# draw_new_line "$result_table_width" "$word_list_file_name" "" "center" "$vertical_border_char"
+# draw_bottom_border "$result_table_width"
