@@ -13,113 +13,43 @@ _omz_wpm_plugin_dir=$1
 test_duration=$2
 word_list_file_name="words_top-250-english-easy.txt"
 
-# Table drawing functions
-draw_top_border() {
-    local width="$1"
-    printf "╔%*s╗\n" "$width" | sed 's/ /═/g'
-}
+draw_table() {
+    local width="$1"      # Table width
+    local rows=("${@:2}") # Array of lines to draw: ""=empty row, "<char>"=separator, "<string>"=line of text
+    local table=""
 
-draw_bottom_border() {
-    local width="$1"
-    printf "╚%*s╝\n" "$width" | sed 's/ /═/g'
-}
-
-draw_separator() {
-    local width="$1"
-    local separator_char="${2:-─}"      # default is '─'
-    local vertical_border_char="${3:-}" # default is empty
-
-    if [[ "$separator_char" == "═" ]]; then
-        printf "╠%*s╣\n" "$width" | sed "s/ /$separator_char/g"
-    else
-        printf "$vertical_border_char%*s$vertical_border_char\n" "$width" | sed "s/ /$separator_char/g"
-    fi
-}
-
-draw_new_line() {
-    local width="$1"
-    local label="${2:-}"       # default is empty
-    local value="${3:-}"       # default is empty
-    local align="${4:-}"       # center, left, or right
-    local border_char="${5:-}" # default is empty
-
-    if [[ "$align" == "center" ]]; then
-        center_align "$width" "$label" "$border_char"
-    elif [[ "$align" == "right" ]]; then
-        right_align "$width" "$label" "$value" "$border_char"
-    else
-        left_align "$width" "$label" "$value" "$border_char"
-    fi
-}
-
-# TODO: replace other draw and center functions with this function
-draw_box() {
-    local width="$1"         # The outer box width
-    local content=("${@:2}") # Accepts an array of additional content lines after width argument
-    local box=""
-
-    box+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
-    for line in "${content[@]}"; do
+    table+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
+    for line in "${rows[@]}"; do
         if [[ "$line" == "═" ]]; then
-            box+="╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
+            table+="╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
         elif [[ "${#line}" -eq 1 ]]; then
-            box+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
+            table+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
         else
             local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
             local padding_left=$(((width - ${#clean_line}) / 2))
             local padding_right=$((width - ${#clean_line} - padding_left))
             line=$(echo "$line" | sed 's/%/%%/g') # Double any % symbols in line (% is a special character in printf)
-            box+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
+            table+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
         fi
     done
-    box+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
+    table+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
 
     clear
-    printf "$box"
+    printf "$table"
 }
 
-center_align() {
-    local width="$1"
-    local label="$2"
-    local border_char="$3"
-    local clean_label=$(printf '%b' "$label" | sed 's/\x1b\[[0-9;]*m//g')
-    local padding_left=$(((width - ${#clean_label}) / 2))
-    local padding_right=$((width - ${#clean_label} - padding_left))
-    printf "$border_char%${padding_left}s%s%${padding_right}s$border_char\n" "" "$label" ""
-}
-
-left_align() {
-    local width="$1"
-    local label="$2"
-    local value="$3"
-    local border_char="$4"
-    local clean_label=$(printf '%b' "$label" | sed 's/\x1b\[[0-9;]*m//g')
-    printf "$border_char  %-10s %-*s  $border_char\n" "$clean_label" $((width - 15)) "$value"
-}
-
-right_align() {
-    local width="$1"
-    local label="$2"
-    local value="$3"
-    local border_char="$4"
-    local clean_label=$(printf '%b' "$label" | sed 's/\x1b\[[0-9;]*m//g')
-    printf "$border_char  %-10s %$((width - 15))s  $border_char\n" "$clean_label" "$value"
-}
-
-# File selection menu
-select_word_list() {
+list_files() {
     local files=()
-    for file in "$(dirname "$_omz_wpm_plugin_dir")/wpm/lists"/*.txt; do
-        files+=($(basename "$file"))
+    local numbered_files=()
+    local index=1
+
+    for file in $(dirname "$_omz_wpm_plugin_dir")/wpm/lists/*.txt; do
+        files+=("$(basename "$file")")
+        numbered_files+="$index. $(basename "$file")\n"
+        index=$((index + 1))
     done
 
-    draw_top_border "$file_selection_table_width"
-    draw_new_line "$file_selection_table_width" "Word Lists" "" "center" "$vertical_border_char"
-    draw_separator "$file_selection_table_width" "$header_separator_char" "$vertical_border_char"
-    for i in {1..${#files[@]}}; do
-        draw_new_line "$file_selection_table_width" "$i." "${files[$i]}" "right" "$vertical_border_char"
-    done
-    draw_bottom_border "$file_selection_table_width"
+    draw_table "$file_selection_table_width" "Word Lists" "═" "${numbered_files[@]}"
 
     local selection
     while true; do
@@ -133,9 +63,8 @@ select_word_list() {
     done
 }
 
-select_word_list
+list_files
 
-# Typing test functions
 generate_random_word() {
     local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
     printf "%s\n" "${words[$random_index]}"
@@ -150,12 +79,12 @@ generate_word_list() {
     printf "%s\n" "${word_list[@]}"
 }
 
-display_state() {
+show_state() {
     local is_correct="${1}"
 
     if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-        draw_box "$typing_table_width" "$word_list_top" "$word_list_bottom"
+        draw_table "$typing_table_width" "$word_list_top" "$word_list_bottom"
     elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
         index=$((current_word_index - 1))
         word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
@@ -167,7 +96,7 @@ display_state() {
         fi
 
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-        draw_box "$typing_table_width" "$word_list_top" "$word_list_bottom"
+        draw_table "$typing_table_width" "$word_list_top" "$word_list_bottom"
     fi
 
     printf "\r\033[K"
@@ -189,7 +118,7 @@ total_keystrokes=0
 
 tput civis # Hide cursor
 
-display_state 0
+show_state 0
 
 # Main loop
 while [ $(date +%s) -lt $end_time ]; do
@@ -201,7 +130,7 @@ while [ $(date +%s) -lt $end_time ]; do
 
     if [[ "$char" == $'\177' ]]; then # backspace keystroke
         user_input=${user_input%?}    # remove last character
-        display_state
+        show_state
     elif [[ "$char" == " " ]]; then # space keystroke
         is_correct=1
         if [[ "$user_input" == "${word_list[$current_word_index]}" ]]; then
@@ -221,10 +150,10 @@ while [ $(date +%s) -lt $end_time ]; do
 
         current_word_index=$((current_word_index + 1))
         user_input=""
-        display_state $is_correct
+        show_state $is_correct
     else
         user_input+=$char
-        display_state
+        show_state
     fi
 done
 
@@ -290,19 +219,4 @@ fi
 save_stats "$stats"
 clear
 
-draw_box "$result_table_width" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$word_list_file_name"
-
-# draw_top_border "$result_table_width"
-# draw_new_line "$result_table_width" "Result" "" "center" "$vertical_border_char"
-# draw_separator "$result_table_width" "$header_separator_char" "$vertical_border_char"
-# draw_new_line "$result_table_width" "" "" "" "$vertical_border_char"
-# draw_new_line "$result_table_width" "$wpm WPM" "" "center" "$vertical_border_char"
-# draw_new_line "$result_table_width" "" "" "" "$vertical_border_char"
-# draw_separator "$result_table_width" "$data_separator_char" "$vertical_border_char"
-# draw_new_line "$result_table_width" "Keystrokes" "$total_keystrokes" "right" "$vertical_border_char"
-# draw_new_line "$result_table_width" "Accuracy" "$accuracy%" "right" "$vertical_border_char"
-# draw_new_line "$result_table_width" "Correct" "$correct_words" "right" "$vertical_border_char"
-# draw_new_line "$result_table_width" "Incorrect" "$incorrect_words" "right" "$vertical_border_char"
-# draw_separator "$result_table_width" "$data_separator_char" "$vertical_border_char"
-# draw_new_line "$result_table_width" "$word_list_file_name" "" "center" "$vertical_border_char"
-# draw_bottom_border "$result_table_width"
+draw_table "$result_table_width" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$word_list_file_name"
