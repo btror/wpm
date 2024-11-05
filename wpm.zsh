@@ -60,10 +60,10 @@ draw_box() {
 
     box+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
     for line in "${content[@]}"; do
-        if [[ "${#line}" -eq 1 ]]; then
-            box+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
-        elif [[ "$line" == "═" ]]; then
+        if [[ "$line" == "═" ]]; then
             box+="╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
+        elif [[ "${#line}" -eq 1 ]]; then
+            box+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
         else
             local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
             local padding_left=$(((width - ${#clean_line}) / 2))
@@ -290,7 +290,7 @@ fi
 save_stats "$stats"
 clear
 
-draw_box "$result_table_width" "Result" "═" "" "$wpm WPM" "" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "" "$word_list_file_name"
+draw_box "$result_table_width" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$word_list_file_name"
 
 # draw_top_border "$result_table_width"
 # draw_new_line "$result_table_width" "Result" "" "center" "$vertical_border_char"
