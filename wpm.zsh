@@ -1,22 +1,133 @@
-trap 'tput cnorm; exit' INT TERM EXIT # Enable cursor and exit on interrupt
+# Trap to restore cursor visibility and exit cleanly on signals
+trap 'tput cnorm; exit' INT TERM EXIT
+
+# Enable certain options
 setopt nullglob noglobdots
 
-# Configurable variables
-typing_table_width=100
-result_table_width=42
-file_selection_table_width=45
-prompt_char=">"
-header_separator_char="═"
-data_separator_char="─"
-vertical_border_char="║"
-_omz_wpm_plugin_dir=$1
-test_duration=$2
-word_list_file_name="words_top-250-english-easy.txt"
+# Constants and Configurable Variables
+TYPING_TABLE_WIDTH=100
+RESULT_TABLE_WIDTH=42
+FILE_SELECTION_TABLE_WIDTH=45
+PROMPT_CHAR=">"
+HEADER_SEPARATOR_CHAR="═"
+DATA_SEPARATOR_CHAR="─"
+VERTICAL_BORDER_CHAR="║"
+_OMZ_WPM_PLUGIN_DIR=$1
+TEST_DURATION=$2
+WORD_LIST_FILE_NAME="words_top-250-english-easy.txt"
+
+### Utility Functions ###
+
+load_stats() {
+    if [[ -f "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json" ]]; then
+        cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+    else
+        printf "{}"
+    fi
+}
+
+save_stats() {
+    local data="$1"
+    mkdir -p "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats"
+    printf "%s" "$data" >"$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+}
+
+generate_random_word() {
+    local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
+    printf "%s\n" "${words[$random_index]}"
+}
+
+generate_word_list() {
+    local count="$1"
+    local word_list=()
+    for i in {1..$count}; do
+        word_list+=("$(generate_random_word)")
+    done
+    printf "%s\n" "${word_list[@]}"
+}
+
+### Main UI and State Functions ###
+
+list_files() {
+    local files=()
+    local numbered_files=()
+    local index=1
+
+    for file in $(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/*.txt; do
+        files+=("$(basename "$file")")
+        numbered_files+="$index. $(basename "$file")\n"
+        index=$((index + 1))
+    done
+
+    draw_table "$FILE_SELECTION_TABLE_WIDTH" "Word Lists" "═" "${numbered_files[@]}"
+
+    local selection
+    while true; do
+        printf "Select (1-${#files[@]}): "
+        read selection
+        if [[ "$selection" =~ ^[0-9]+$ ]] && ((selection >= 1)) && ((selection <= ${#files[@]})); then
+            WORD_LIST_FILE_NAME="${files[$selection]}"
+            break
+        fi
+        printf "%s\n" "Invalid selection. Please try again."
+    done
+}
+
+draw_table() {
+    local width="$1"      # Table width
+    local rows=("${@:2}") # Array of lines to draw: ""=empty row, "<char>"=separator, "<string>"=line of text
+    local table=""
+
+    table+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
+    for line in "${rows[@]}"; do
+        if [[ "$line" == "═" ]]; then
+            table+="╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
+        elif [[ "${#line}" -eq 1 ]]; then
+            table+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
+        else
+            local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
+            local padding_left=$(((width - ${#clean_line}) / 2))
+            local padding_right=$((width - ${#clean_line} - padding_left))
+            line=$(echo "$line" | sed 's/%/%%/g') # Double any % symbols in line (% is a special character in printf)
+            table+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
+        fi
+    done
+    table+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
+
+    clear
+    printf "$table"
+}
+
+update_state() {
+    local is_correct="${1}"
+
+    if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
+        word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
+        draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
+    elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
+        index=$((current_word_index - 1))
+        word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
+
+        if [[ $is_correct -eq 0 ]]; then
+            word_list_top[$index]=$'\e[32m'"${word_list_top[index]}"$'\e[0m'
+        elif [[ $is_correct -eq 1 ]]; then
+            word_list_top[$index]=$'\e[31m'"${word_list_top[index]}"$'\e[0m'
+        fi
+
+        word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
+        draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
+    fi
+
+    printf "\r\033[K"
+    printf "$PROMPT_CHAR $user_input"
+}
+
+### Main Function ###
 
 main() {
     local start_time=$(date +%s)
-    local end_time=$((start_time + test_duration))                                          # test duration is param 1
-    local words=($(cat "$(dirname "$_omz_wpm_plugin_dir")/wpm/lists/$word_list_file_name")) # _omz_wpm_plugin_dir is param 2, word_list_file_name is param 3
+    local end_time=$((start_time + TEST_DURATION))
+    local words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
     local word_list=($(generate_word_list 20))
     local word_list_top=("${word_list[@]:0:10}")
     local word_list_bottom=("${word_list[@]:10}")
@@ -75,149 +186,34 @@ main() {
         accuracy=$(((correct_words * 100) / total_words))
     fi
 
-    # Store test results
-    load_stats() {
-        if [ -f "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json" ]; then
-            cat "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json"
-        else
-            printf "{}"
-        fi
-    }
-
-    save_stats() {
-        local data="$1"
-        mkdir -p "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats"
-        printf "%s" "$data" >"$(dirname "$_omz_wpm_plugin_dir")/wpm/stats/stats.json"
-    }
-
-    if ! command -v jq &>/dev/null; then # Check if jq is available
-        printf "Warning: jq not found. Please install jq for better JSON handling.\n"
-        printf "Installing jq is recommended: sudo apt install jq (Ubuntu/Debian) or brew install jq (macOS)\n"
-        sleep 2
-    fi
-
     current_date=$(date +"%m/%d/%Y%l:%M%p")
-    new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"wpm\":$wpm,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
-    mkdir -p "$(dirname "$_omz_wpm_plugin_dir")/wpm/stats"
+    new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$TEST_DURATION,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
+
     stats=$(load_stats)
 
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
-            if jq -e ".\"$word_list_file_name\"" >/dev/null 2>&1 <<<"$stats"; then
-                stats=$(jq --arg file "$word_list_file_name" --argjson entry "$new_entry" \
-                    '.[$file] = [$entry] + .[$file]' <<<"$stats")
+            if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
+                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" '.[$file] = [$entry] + .[$file]' <<<"$stats")
             else
-                stats=$(jq --arg file "$word_list_file_name" --argjson entry "$new_entry" \
-                    '. + {($file): [$entry]}' <<<"$stats")
+                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" '. + {($file): [$entry]}' <<<"$stats")
             fi
         else
-            stats="{\"$word_list_file_name\": [$new_entry]}"
+            stats="{\"$WORD_LIST_FILE_NAME\": [$new_entry]}"
         fi
     else
         if [[ $stats == "{}" ]]; then
-            stats="{\"$word_list_file_name\": [$new_entry]}"
+            stats="{\"$WORD_LIST_FILE_NAME\": [$new_entry]}"
         else
-            stats=${stats%?}
-            if [[ $stats == *"\"$word_list_file_name\""* ]]; then
-                stats=$(printf "%s" "$stats" | sed "s/\"$word_list_file_name\":\[/\"$word_list_file_name\":[$new_entry,/")
-            else
-                stats="$stats,\"$word_list_file_name\":[$new_entry]}"
-            fi
+            stats="${stats/%\}/}],\"$WORD_LIST_FILE_NAME\": [$new_entry]}"
         fi
     fi
 
     save_stats "$stats"
-    clear
 
-    draw_table "$result_table_width" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$word_list_file_name"
-}
+    draw_table "$RESULT_TABLE_WIDTH" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$WORD_LIST_FILE_NAME"
 
-update_state() {
-    local is_correct="${1}"
-
-    if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
-        word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-        draw_table "$typing_table_width" "$word_list_top" "$word_list_bottom"
-    elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
-        index=$((current_word_index - 1))
-        word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
-
-        if [[ $is_correct -eq 0 ]]; then
-            word_list_top[$index]=$'\e[32m'"${word_list_top[index]}"$'\e[0m'
-        elif [[ $is_correct -eq 1 ]]; then
-            word_list_top[$index]=$'\e[31m'"${word_list_top[index]}"$'\e[0m'
-        fi
-
-        word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-        draw_table "$typing_table_width" "$word_list_top" "$word_list_bottom"
-    fi
-
-    printf "\r\033[K"
-    printf "$prompt_char $user_input"
-}
-
-draw_table() {
-    local width="$1"      # Table width
-    local rows=("${@:2}") # Array of lines to draw: ""=empty row, "<char>"=separator, "<string>"=line of text
-    local table=""
-
-    table+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
-    for line in "${rows[@]}"; do
-        if [[ "$line" == "═" ]]; then
-            table+="╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
-        elif [[ "${#line}" -eq 1 ]]; then
-            table+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
-        else
-            local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
-            local padding_left=$(((width - ${#clean_line}) / 2))
-            local padding_right=$((width - ${#clean_line} - padding_left))
-            line=$(echo "$line" | sed 's/%/%%/g') # Double any % symbols in line (% is a special character in printf)
-            table+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
-        fi
-    done
-    table+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
-
-    clear
-    printf "$table"
-}
-
-list_files() {
-    local files=()
-    local numbered_files=()
-    local index=1
-
-    for file in $(dirname "$_omz_wpm_plugin_dir")/wpm/lists/*.txt; do
-        files+=("$(basename "$file")")
-        numbered_files+="$index. $(basename "$file")\n"
-        index=$((index + 1))
-    done
-
-    draw_table "$file_selection_table_width" "Word Lists" "═" "${numbered_files[@]}"
-
-    local selection
-    while true; do
-        printf "Select (1-${#files[@]}): "
-        read selection
-        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le "${#files[@]}" ]; then
-            word_list_file_name="${files[$selection]}"
-            break
-        fi
-        printf "%s\n" "Invalid selection. Please try again."
-    done
-}
-
-generate_random_word() {
-    local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
-    printf "%s\n" "${words[$random_index]}"
-}
-
-generate_word_list() {
-    local count="$1"
-    local word_list=()
-    for i in {1..$count}; do
-        word_list+=("$(generate_random_word)")
-    done
-    printf "%s\n" "${word_list[@]}"
+    tput cnorm # Show cursor again
 }
 
 main
