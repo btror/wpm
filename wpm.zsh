@@ -63,23 +63,7 @@ list_files() {
     done
 }
 
-list_files
-
-generate_random_word() {
-    local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
-    printf "%s\n" "${words[$random_index]}"
-}
-
-generate_word_list() {
-    local count="$1"
-    local word_list=()
-    for i in {1..$count}; do
-        word_list+=("$(generate_random_word)")
-    done
-    printf "%s\n" "${word_list[@]}"
-}
-
-show_state() {
+update_state() {
     local is_correct="${1}"
 
     if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
@@ -103,6 +87,20 @@ show_state() {
     printf "$prompt_char $user_input"
 }
 
+generate_random_word() {
+    local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
+    printf "%s\n" "${words[$random_index]}"
+}
+
+generate_word_list() {
+    local count="$1"
+    local word_list=()
+    for i in {1..$count}; do
+        word_list+=("$(generate_random_word)")
+    done
+    printf "%s\n" "${word_list[@]}"
+}
+
 # TODO: wrap other logic in functions
 start_time=$(date +%s)
 end_time=$((start_time + test_duration))
@@ -116,9 +114,9 @@ correct_words=0
 incorrect_words=0
 total_keystrokes=0
 
+list_files
 tput civis # Hide cursor
-
-show_state 0
+update_state 0
 
 # Main loop
 while [ $(date +%s) -lt $end_time ]; do
@@ -130,7 +128,7 @@ while [ $(date +%s) -lt $end_time ]; do
 
     if [[ "$char" == $'\177' ]]; then # backspace keystroke
         user_input=${user_input%?}    # remove last character
-        show_state
+        update_state
     elif [[ "$char" == " " ]]; then # space keystroke
         is_correct=1
         if [[ "$user_input" == "${word_list[$current_word_index]}" ]]; then
@@ -150,10 +148,10 @@ while [ $(date +%s) -lt $end_time ]; do
 
         current_word_index=$((current_word_index + 1))
         user_input=""
-        show_state $is_correct
+        update_state $is_correct
     else
         user_input+=$char
-        show_state
+        update_state
     fi
 done
 
