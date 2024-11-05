@@ -167,6 +167,7 @@ display_state() {
     printf "$prompt_char $user_input"
 }
 
+# TODO: wrap other logic in functions
 start_time=$(date +%s)
 end_time=$((start_time + test_duration))
 words=($(cat "$(dirname "$_omz_wpm_plugin_dir")/wpm/lists/$word_list_file_name"))
@@ -282,6 +283,7 @@ fi
 save_stats "$stats"
 clear
 
+# TODO: ew the fuck is this gross ass shit
 draw_top_border "$result_table_width"
 draw_new_line "$result_table_width" "Result" "" "center" "$vertical_border_char"
 draw_separator "$result_table_width" "$header_separator_char" "$vertical_border_char"
