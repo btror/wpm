@@ -5,6 +5,8 @@ trap 'tput cnorm; exit' INT TERM EXIT
 setopt nullglob noglobdots
 
 # Constants and Configurable Variables
+_OMZ_WPM_PLUGIN_DIR=$1
+TEST_DURATION=$2
 TYPING_TABLE_WIDTH=100
 RESULT_TABLE_WIDTH=42
 FILE_SELECTION_TABLE_WIDTH=45
@@ -12,67 +14,47 @@ PROMPT_CHAR=">"
 HEADER_SEPARATOR_CHAR="═"
 DATA_SEPARATOR_CHAR="─"
 VERTICAL_BORDER_CHAR="║"
-_OMZ_WPM_PLUGIN_DIR=$1
-TEST_DURATION=$2
 WORD_LIST_FILE_NAME="words_top-250-english-easy.txt"
 
 ### Utility Functions ###
 
+# Load stats from the file
 load_stats() {
-    if [[ -f "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json" ]]; then
-        cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+    local stats_file="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+    if [[ -f "$stats_file" ]]; then
+        cat "$stats_file"
     else
         printf "{}"
     fi
 }
 
+# Save stats to the file
 save_stats() {
     local data="$1"
-    mkdir -p "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats"
-    printf "%s" "$data" >"$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+    local stats_dir="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats"
+    mkdir -p "$stats_dir"
+    printf "%s" "$data" >"$stats_dir/stats.json"
 }
 
+# Generate random word from the list
 generate_random_word() {
     local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
     printf "%s\n" "${words[$random_index]}"
 }
 
+# Generate a list of random words
 generate_word_list() {
     local count="$1"
     local word_list=()
-    for i in {1..$count}; do
+    for ((i = 1; i <= count; i++)); do
         word_list+=("$(generate_random_word)")
     done
     printf "%s\n" "${word_list[@]}"
 }
 
-### Main UI and State Functions ###
+### UI Functions ###
 
-list_files() {
-    local files=()
-    local numbered_files=()
-    local index=1
-
-    for file in $(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/*.txt; do
-        files+=("$(basename "$file")")
-        numbered_files+="$index. $(basename "$file")\n"
-        index=$((index + 1))
-    done
-
-    draw_table "$FILE_SELECTION_TABLE_WIDTH" "Word Lists" "═" "${numbered_files[@]}"
-
-    local selection
-    while true; do
-        printf "Select (1-${#files[@]}): "
-        read selection
-        if [[ "$selection" =~ ^[0-9]+$ ]] && ((selection >= 1)) && ((selection <= ${#files[@]})); then
-            WORD_LIST_FILE_NAME="${files[$selection]}"
-            break
-        fi
-        printf "%s\n" "Invalid selection. Please try again."
-    done
-}
-
+# Draw a table
 draw_table() {
     local width="$1"      # Table width
     local rows=("${@:2}") # Array of lines to draw: ""=empty row, "<char>"=separator, "<string>"=line of text
@@ -98,9 +80,40 @@ draw_table() {
     printf "$table"
 }
 
-update_state() {
-    local is_correct="${1}"
+# File selection function
+list_files() {
+    local files=()
+    local numbered_files=()
+    local index=1
+    local file
 
+    for file in $(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/*.txt; do
+        files+=("$(basename "$file")")
+        numbered_files+="$index. $(basename "$file")\n"
+        ((index++))
+    done
+
+    draw_table "$FILE_SELECTION_TABLE_WIDTH" "Word Lists" "═" "${numbered_files[@]}"
+
+    local selection
+    while true; do
+        printf "Select (1-${#files[@]}): "
+        read selection
+        if [[ "$selection" =~ ^[0-9]+$ ]] && ((selection >= 1)) && ((selection <= ${#files[@]})); then
+            WORD_LIST_FILE_NAME="${files[$selection]}"
+            break
+        fi
+        printf "%s\n" "Invalid selection. Please try again."
+    done
+}
+
+### State Functions ###
+
+# Update game state with correct/incorrect status
+update_state() {
+    local is_correct="$1"
+
+    # Handle word status and re-draw the table
     if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
         draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
@@ -125,34 +138,47 @@ update_state() {
 ### Main Function ###
 
 main() {
-    local start_time=$(date +%s)
-    local end_time=$((start_time + TEST_DURATION))
-    local words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
-    local word_list=($(generate_word_list 20))
-    local word_list_top=("${word_list[@]:0:10}")
-    local word_list_bottom=("${word_list[@]:10}")
-    local current_word_index=1
-    local user_input=""
-    local correct_words=0
-    local incorrect_words=0
-    local total_keystrokes=0
+    local start_time end_time elapsed_time correct_words incorrect_words total_keystrokes word_list
+    local word_list_top word_list_bottom current_word_index user_input stats wpm accuracy selection
 
-    list_files
+    # Ensure all necessary parameters are provided
+    if [[ -z "$_OMZ_WPM_PLUGIN_DIR" || -z "$TEST_DURATION" ]]; then
+        echo "Usage: $_OMZ_WPM_PLUGIN_DIR TEST_DURATION"
+        exit 1
+    fi
+
+    start_time=$(date +%s)
+    end_time=$((start_time + TEST_DURATION))
+
+    correct_words=0
+    incorrect_words=0
+    total_keystrokes=0
+
+    words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
+    word_list=($(generate_word_list 20))
+    word_list_top=("${word_list[@]:0:10}")
+    word_list_bottom=("${word_list[@]:10}")
+
+    current_word_index=1
+
+    user_input=""
+
+    list_files # Allow user to select the file
+
     tput civis # Hide cursor
     update_state 0
 
     # Main loop
-    while [ $(date +%s) -lt $end_time ]; do
+    while [[ $(date +%s) -lt $end_time ]]; do
         remaining_time=$((end_time - $(date +%s)))
-
         read -t $remaining_time -k 1 char || break
 
         total_keystrokes=$((total_keystrokes + 1)) # Increment for every keystroke
 
-        if [[ "$char" == $'\177' ]]; then # backspace keystroke
-            user_input=${user_input%?}    # remove last character
+        if [[ "$char" == $'\177' ]]; then
+            user_input=${user_input%?} # Backspace logic
             update_state
-        elif [[ "$char" == " " ]]; then # space keystroke
+        elif [[ "$char" == " " ]]; then
             is_correct=1
             if [[ "$user_input" == "${word_list[$current_word_index]}" ]]; then
                 correct_words=$((correct_words + 1))
@@ -161,14 +187,13 @@ main() {
                 incorrect_words=$((incorrect_words + 1))
             fi
 
+            # Handle word list progression
             if [[ $current_word_index -ge 10 ]]; then
                 word_list=("${word_list[@]:10}" $(generate_word_list 10 | cut -d' ' -f1-10))
                 word_list_top=("${word_list[@]:0:10}")
                 word_list_bottom=("${word_list[@]:10}")
-
                 current_word_index=0
             fi
-
             current_word_index=$((current_word_index + 1))
             user_input=""
             update_state $is_correct
@@ -178,19 +203,18 @@ main() {
         fi
     done
 
+    # Calculate stats
     elapsed_time=$((end_time - start_time))
     total_words=$((correct_words + incorrect_words))
     wpm=$(((correct_words * 60) / elapsed_time))
-    accuracy=0
-    if [[ $total_words -gt 0 ]]; then
-        accuracy=$(((correct_words * 100) / total_words))
-    fi
+    accuracy=$((correct_words * 100 / total_words))
 
+    # Save stats
     current_date=$(date +"%m/%d/%Y%l:%M%p")
     new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$TEST_DURATION,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 
+    # Update stats logic with jq
     stats=$(load_stats)
-
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
             if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
@@ -211,6 +235,7 @@ main() {
 
     save_stats "$stats"
 
+    # Display results
     draw_table "$RESULT_TABLE_WIDTH" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$WORD_LIST_FILE_NAME"
 
     tput cnorm # Show cursor again
