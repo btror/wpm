@@ -37,8 +37,12 @@ You can set a timer if you want (default is 60):
 wpm_test <seconds>
 ```
 
-### Example
+<details>
+<summary>Example</summary>
+
+
 Select a word list txt file in the `lists` folder to use.
+
 ```
 (10:03pm)──> wpm_test 60
 ╔═════════════════════════════════════════════╗
@@ -123,6 +127,7 @@ Every result is stored as an entry in `wpm/stats/stats.json`. Results are stored
   ]
 }
 ```
+</details>
 
 ## Configuration
 Add as many txt word lists you want in `wpm/lists/`. Words must be on their own line.
