@@ -46,7 +46,7 @@ generate_random_word() {
 generate_word_list() {
     local count="$1"
     local word_list=()
-    for ((i = 1; i <= count; i++)); do
+    for i in {1..$count}; do
         word_list+=("$(generate_random_word)")
     done
     printf "%s\n" "${word_list[@]}"
@@ -99,7 +99,7 @@ list_files() {
     while true; do
         printf "Select (1-${#files[@]}): "
         read selection
-        if [[ "$selection" =~ ^[0-9]+$ ]] && ((selection >= 1)) && ((selection <= ${#files[@]})); then
+        if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le "${#files[@]}" ]; then
             WORD_LIST_FILE_NAME="${files[$selection]}"
             break
         fi
@@ -147,6 +147,8 @@ main() {
         exit 1
     fi
 
+    list_files # Allow user to select word file
+
     start_time=$(date +%s)
     end_time=$((start_time + TEST_DURATION))
 
@@ -163,8 +165,6 @@ main() {
 
     user_input=""
 
-    list_files # Allow user to select the file
-
     tput civis # Hide cursor
     update_state 0
 
@@ -175,10 +175,10 @@ main() {
 
         total_keystrokes=$((total_keystrokes + 1)) # Increment for every keystroke
 
-        if [[ "$char" == $'\177' ]]; then
-            user_input=${user_input%?} # Backspace logic
+        if [[ "$char" == $'\177' ]]; then # Backspace
+            user_input=${user_input%?}
             update_state
-        elif [[ "$char" == " " ]]; then
+        elif [[ "$char" == $'\040' ]]; then # Spacebar
             is_correct=1
             if [[ "$user_input" == "${word_list[$current_word_index]}" ]]; then
                 correct_words=$((correct_words + 1))
@@ -187,7 +187,6 @@ main() {
                 incorrect_words=$((incorrect_words + 1))
             fi
 
-            # Handle word list progression
             if [[ $current_word_index -ge 10 ]]; then
                 word_list=("${word_list[@]:10}" $(generate_word_list 10 | cut -d' ' -f1-10))
                 word_list_top=("${word_list[@]:0:10}")
