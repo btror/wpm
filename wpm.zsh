@@ -58,23 +58,25 @@ generate_word_list() {
 draw_table() {
     local width="$1"      # Table width
     local rows=("${@:2}") # Array of lines to draw: ""=empty row, "<char>"=separator, "<string>"=line of text
+    local term_width=$(tput cols)
+    local start_col=$(((term_width - width - 2) / 2))
     local table=""
 
-    table+="\n╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
+    table+="\n$(printf '%*s' "$start_col" "")╔$(printf '═%.0s' $(seq 1 "$width"))╗\n"
     for line in "${rows[@]}"; do
         if [[ "$line" == "═" ]]; then
-            table+="╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
+            table+="$(printf '%*s' "$start_col" "")╠$(printf $line'%.0s' $(seq 1 "$width"))╣\n"
         elif [[ "${#line}" -eq 1 ]]; then
-            table+="║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
+            table+="$(printf '%*s' "$start_col" "")║$(printf $line'%.0s' $(seq 1 "$width"))║\n"
         else
             local clean_line=$(printf '%b' "$line" | sed 's/\x1b\[[0-9;]*m//g') # Remove ANSI codes for length
             local padding_left=$(((width - ${#clean_line}) / 2))
             local padding_right=$((width - ${#clean_line} - padding_left))
             line=$(echo "$line" | sed 's/%/%%/g') # Double any % symbols in line (% is a special character in printf)
-            table+="║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
+            table+="$(printf '%*s' "$start_col" "")║$(printf '%*s' "$padding_left" "")$line$(printf '%*s' "$padding_right" "")║\n"
         fi
     done
-    table+="╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
+    table+="$(printf '%*s' "$start_col" "")╚$(printf '═%.0s' $(seq 1 "$width"))╝\n"
 
     clear
     printf "$table"
@@ -111,10 +113,12 @@ list_files() {
 
 # Update game state with correct/incorrect status
 update_state() {
-    local is_correct="$1"
+    local is_correct="$1" # 1=incorrect, 0=correct, -1=redraw table
 
     # Handle word status and re-draw the table
-    if [[ -n $is_correct && $current_word_index -eq 1 ]]; then
+    if [[ $is_correct -eq -1 ]]; then
+        draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
+    elif [[ -n $is_correct && $current_word_index -eq 1 ]]; then
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
         draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
     elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
@@ -167,6 +171,8 @@ main() {
 
     tput civis # Hide cursor
     update_state 0
+
+    trap 'update_state -1' WINCH # Redraw table on window resize
 
     # Main loop
     while [[ $(date +%s) -lt $end_time ]]; do
