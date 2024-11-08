@@ -8,8 +8,8 @@ setopt nullglob noglobdots
 _OMZ_WPM_PLUGIN_DIR=$1
 TEST_DURATION=$2
 TYPING_TABLE_WIDTH=100
-RESULT_TABLE_WIDTH=65
-FILE_SELECTION_TABLE_WIDTH=85
+RESULT_TABLE_WIDTH=50
+FILE_SELECTION_TABLE_WIDTH=50
 PROMPT_CHAR=">"
 HEADER_SEPARATOR_CHAR="═"
 DATA_SEPARATOR_CHAR="─"
@@ -91,7 +91,8 @@ list_files() {
 
     for file in $(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/*.txt; do
         files+=("$(basename "$file")")
-        numbered_files+="$index. $(basename "$file")\n"
+        local filename="$(basename "$file")"
+        numbered_files+=("$(printf "%-5s %*s" "$index." "$(( FILE_SELECTION_TABLE_WIDTH - 10 ))" "$filename")")
         ((index++))
     done
 
@@ -99,7 +100,11 @@ list_files() {
 
     local selection
     while true; do
-        printf "Select (1-${#files[@]}): "
+        local term_width=$(tput cols)
+        local start_col=$(((term_width / 2) - (FILE_SELECTION_TABLE_WIDTH / 2) - 1))
+        printf "\r\033[K"
+        printf "\r$(printf '%*s' "$start_col" "")Select (1-${#files[@]}): "
+
         read selection
         if [[ "$selection" =~ ^[0-9]+$ ]] && [ "$selection" -ge 1 ] && [ "$selection" -le "${#files[@]}" ]; then
             WORD_LIST_FILE_NAME="${files[$selection]}"
@@ -243,9 +248,17 @@ main() {
 
     save_stats "$stats"
 
-    # Display results
-    draw_table "$RESULT_TABLE_WIDTH" "Result" "═" "" "$wpm WPM" "" "-" "Keystrokes $total_keystrokes" "Accuracy $accuracy%" "Correct $correct_words" "Incorrect $incorrect_words" "-" "" "═" "$WORD_LIST_FILE_NAME"
-
+    local label_width=$(printf '%s\n' "Keystrokes" "Accuracy" "Correct" "Incorrect" | awk '{print length}' | sort -nr | head -n1)
+    local value_width=10
+    local label_max_width=$((RESULT_TABLE_WIDTH - value_width - 5))
+    local result_data=(
+        "$(printf ' %-*s %*s ' "$label_max_width" "Keystrokes" "$value_width" "$total_keystrokes")"
+        "$(printf ' %-*s %*s ' "$label_max_width" "Accuracy" "$value_width" "$accuracy%")"
+        "$(printf ' %-*s %*s ' "$label_max_width" "Correct" "$value_width" "$correct_words")"
+        "$(printf ' %-*s %*s ' "$label_max_width" "Incorrect" "$value_width" "$incorrect_words")"
+    )
+    draw_table "$RESULT_TABLE_WIDTH" "Result" "═" "" "$wpm WPM" "" "-" "${result_data[@]}"  "-" "" "═" "$WORD_LIST_FILE_NAME"
+    
     tput cnorm # Show cursor again
 }
 
