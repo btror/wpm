@@ -8,8 +8,8 @@ setopt nullglob noglobdots
 _OMZ_WPM_PLUGIN_DIR=$1
 TEST_DURATION=$2
 TYPING_TABLE_WIDTH=100
-RESULT_TABLE_WIDTH=42
-FILE_SELECTION_TABLE_WIDTH=45
+RESULT_TABLE_WIDTH=65
+FILE_SELECTION_TABLE_WIDTH=85
 PROMPT_CHAR=">"
 HEADER_SEPARATOR_CHAR="═"
 DATA_SEPARATOR_CHAR="─"
@@ -113,7 +113,7 @@ list_files() {
 
 # Update game state with correct/incorrect status
 update_state() {
-    local is_correct="$1" # 1=incorrect, 0=correct, -1=redraw table
+    local is_correct="$1"
 
     # Handle word status and re-draw the table
     if [[ $is_correct -eq -1 ]]; then
@@ -135,8 +135,10 @@ update_state() {
         draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
     fi
 
+    local term_width=$(tput cols)
+    local start_col=$(((term_width / 2) - (TYPING_TABLE_WIDTH / 2) - 1))
     printf "\r\033[K"
-    printf "$PROMPT_CHAR $user_input"
+    printf "\r$(printf '%*s' "$start_col" "")$PROMPT_CHAR $user_input"
 }
 
 ### Main Function ###
@@ -151,6 +153,9 @@ main() {
         exit 1
     fi
 
+    trap 'update_state -1' WINCH # Handle window resize
+
+    # TODO: center the file list table on windows resize 
     list_files # Allow user to select word file
 
     start_time=$(date +%s)
@@ -171,8 +176,6 @@ main() {
 
     tput civis # Hide cursor
     update_state 0
-
-    trap 'update_state -1' WINCH # Redraw table on window resize
 
     # Main loop
     while [[ $(date +%s) -lt $end_time ]]; do
