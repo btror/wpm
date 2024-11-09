@@ -1,8 +1,6 @@
 # wpm plugin
 This [oh-my-zsh](https://github.com/ohmyzsh/ohmyzsh) plugin lets you test your typing speed in a terminal, track WPM, accuracy, and more. Results are saved in a handy JSON format for easy tracking.
 
-Demo speed is 4x and does not reflect actual WPM.
-
 <img src="demo.gif" width="500" height="180">
 
 ## Setup
