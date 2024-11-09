@@ -3,7 +3,7 @@ This oh-my-zsh plugin allows users to test and improve their typing speed direct
 
 Demo speed is 4x and does not reflect actual WPM.
 
-<img src="demo.gif" width="485" height="175">
+<img src="demo.gif" width="500" height="180">
 
 ## Setup
 
@@ -42,22 +42,13 @@ View a list of speed test results via:
 wpm_history
 ```
 
-<img src="demo2.gif" width="400" height="280">
+<img src="demo2.gif" width="500" height="320">
 
 ### Data
 
 Select a word list txt file to use. Feel free to add your own lists in `wpm/lists/`.
 
-```
-╔═════════════════════════════════════════════╗
-║                 Word Lists                  ║
-╠═════════════════════════════════════════════╣
-║  1.         words_top-1000-english-adv.txt  ║
-║  2.          words_top-250-english-adv.txt  ║
-║  3.         words_top-250-english-easy.txt  ║
-╚═════════════════════════════════════════════╝
-Select (1-3):
-```
+<img src="screenshot.png" width="500" height="180">
 
 Test results are stored in `wpm/stats/stats.json` and are organized via file name.
 ```
