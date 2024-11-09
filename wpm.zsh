@@ -26,10 +26,10 @@ update_state() {
 
     # Handle word status and re-draw the table
     if [[ $is_correct -eq -1 ]]; then
-        draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
+        _draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
     elif [[ -n $is_correct && $current_word_index -eq 1 ]]; then
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-        draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
+        _draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
     elif [[ -n $is_correct && $current_word_index -gt 1 ]]; then
         index=$((current_word_index - 1))
         word_list_top[$index]=$(printf "%s" "${word_list_top[index]}" | sed 's/\x1b\[[0-9;]*m//g')
@@ -41,7 +41,7 @@ update_state() {
         fi
 
         word_list_top[$current_word_index]=$'\e[47;40m'"${word_list_top[current_word_index]}"$'\e[0m'
-        draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
+        _draw_table "$TYPING_TABLE_WIDTH" "$word_list_top" "$word_list_bottom"
     fi
 
     local term_width=$(tput cols)
@@ -64,7 +64,7 @@ main() {
 
     trap 'update_state -1' WINCH # Handle window resize
 
-    list_files # Allow user to select word file
+    _list_files # Allow user to select word file
 
     start_time=$(date +%s)
     end_time=$((start_time + TEST_DURATION))
@@ -74,7 +74,7 @@ main() {
     total_keystrokes=0
 
     words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
-    word_list=($(generate_word_list 20))
+    word_list=($(_generate_word_list 20))
     word_list_top=("${word_list[@]:0:10}")
     word_list_bottom=("${word_list[@]:10}")
 
@@ -105,7 +105,7 @@ main() {
             fi
 
             if [[ $current_word_index -ge 10 ]]; then
-                word_list=("${word_list[@]:10}" $(generate_word_list 10 | cut -d' ' -f1-10))
+                word_list=("${word_list[@]:10}" $(_generate_word_list 10 | cut -d' ' -f1-10))
                 word_list_top=("${word_list[@]:0:10}")
                 word_list_bottom=("${word_list[@]:10}")
                 current_word_index=0
@@ -130,7 +130,7 @@ main() {
     new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$TEST_DURATION,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 
     # Update stats logic with jq
-    stats=$(load_stats)
+    stats=$(_load_stats)
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
             if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
@@ -149,7 +149,7 @@ main() {
         fi
     fi
 
-    save_stats "$stats"
+    _save_stats "$stats"
 
     local label_width=$(printf '%s\n' "Keystrokes" "Accuracy" "Correct" "Incorrect" | awk '{print length}' | sort -nr | head -n1)
     local value_width=10
@@ -160,7 +160,7 @@ main() {
         "$(printf ' %-*s %*s ' "$label_max_width" "Correct" "$value_width" "$correct_words")"
         "$(printf ' %-*s %*s ' "$label_max_width" "Incorrect" "$value_width" "$incorrect_words")"
     )
-    draw_table "$RESULT_TABLE_WIDTH" "Result" "═" "" "$wpm WPM" "" "-" "${result_data[@]}"  "-" "" "═" "$WORD_LIST_FILE_NAME"
+    _draw_table "$RESULT_TABLE_WIDTH" "Result" "═" "" "$wpm WPM" "" "-" "${result_data[@]}"  "-" "" "═" "$WORD_LIST_FILE_NAME"
     
     tput cnorm # Show cursor again
 }
