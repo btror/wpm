@@ -3,7 +3,7 @@ This oh-my-zsh plugin allows users to test and improve their typing speed direct
 
 Demo speed is 4x and does not reflect actual WPM.
 
-<img src="demo.gif" width="400" height="300">
+<img src="demo.gif" width="485" height="175">
 
 ## Setup
 
@@ -37,14 +37,18 @@ You can set a timer if you want (default is 60):
 wpm_test <seconds>
 ```
 
-<details>
-<summary>Example</summary>
+View a list of speed test results via:
+```
+wpm_history
+```
 
+<img src="demo2.gif" width="400" height="280">
 
-Select a word list txt file in the `lists` folder to use.
+### Data
+
+Select a word list txt file to use. Feel free to add your own lists in `wpm/lists/`.
 
 ```
-(10:03pm)──> wpm_test 60
 ╔═════════════════════════════════════════════╗
 ║                 Word Lists                  ║
 ╠═════════════════════════════════════════════╣
@@ -55,34 +59,7 @@ Select a word list txt file in the `lists` folder to use.
 Select (1-3):
 ```
 
-Random words are pulled from the list until the timer stops. Correctly typed words turn green and incorrect ones turn red.
-```
-────────────────────────────────────────────────────────────────────────────────────────────────────
-                       height easy branch short day about piece own bus side                        
-                         you young large easy about dog home ball rich blue                         
-────────────────────────────────────────────────────────────────────────────────────────────────────
-> heigh
-```
-
-Results are displayed in a table when the timer runs out.
-```
-╔══════════════════════════════════════════╗
-║                  Result                  ║
-╠══════════════════════════════════════════╣
-║                                          ║
-║                  77 WPM                  ║
-║                                          ║
-║──────────────────────────────────────────║
-║  Keystrokes                         406  ║
-║  Accuracy                           96%  ║
-║  Correct                             77  ║
-║  Incorrect                            3  ║
-║──────────────────────────────────────────║
-║      words_top-250-english-easy.txt      ║
-╚══════════════════════════════════════════╝
-```
-
-Every result is stored as an entry in `wpm/stats/stats.json`. Results are stored relative to the txt file name ran against.
+Test results are stored in `wpm/stats/stats.json` and are organized via file name.
 ```
 {
   "words_top-250-english-easy.txt": [
@@ -102,15 +79,6 @@ Every result is stored as an entry in `wpm/stats/stats.json`. Results are stored
       "keystrokes": 29,
       "accuracy": 100,
       "correct": 4,
-      "incorrect": 0
-    },
-    {
-      "date": "11/03/2024 10:02PM",
-      "wpm": 78,
-      "test duration": 10,
-      "keystrokes": 67,
-      "accuracy": 100,
-      "correct": 13,
       "incorrect": 0
     }
   ],

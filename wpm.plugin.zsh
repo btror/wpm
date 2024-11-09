@@ -25,9 +25,9 @@ function wpm_test() {
 
 # Shows a list of results from the stats folder
 #
-# wpm_results
+# wpm_history
 #
-function wpm_results() {
+function wpm_history() {
   local stats_file="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
 
   if [[ -f "$stats_file" ]]; then
