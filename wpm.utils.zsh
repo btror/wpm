@@ -41,7 +41,7 @@ _load_stats() {
     fi
 
     if [[ -f "$stats_file" ]]; then
-        cat "$stats_file"
+        jq '.' "$stats_file"
     else
         printf "{}"
     fi
