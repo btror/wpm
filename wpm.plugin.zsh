@@ -28,7 +28,7 @@ source "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/wpm.utils.zsh"
 #
 function wpm_test() {
     local test_duration=${1:-60}  # Default to 60 if not provided
-    local start_time end_time elapsed_time correct_words incorrect_words total_keystrokes word_list
+    local start_time end_time elapsed_time correct_words incorrect_words keystrokes word_list
     local word_list_top word_list_bottom current_word_index user_input stats wpm accuracy selection
 
     # Ensure all necessary parameters are provided
@@ -124,7 +124,7 @@ function wpm_test() {
 
     correct_words=0
     incorrect_words=0
-    total_keystrokes=0
+    keystrokes=0
 
     words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
     word_list=($(generate_word_list 20))
@@ -143,7 +143,7 @@ function wpm_test() {
         remaining_time=$((end_time - $(date +%s)))
         read -t $remaining_time -k 1 char || break
 
-        total_keystrokes=$((total_keystrokes + 1)) # Increment for every keystroke
+        keystrokes=$((keystrokes + 1)) # Increment for every keystroke
 
         if [[ "$char" == $'\177' ]]; then # Backspace
             user_input=${user_input%?}
@@ -179,34 +179,35 @@ function wpm_test() {
     accuracy=$((correct_words * 100 / total_words))
 
     current_date=$(date +"%m/%d/%Y%l:%M%p")
-    new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
+    new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"keystrokes\":$keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 
     # Update stats logic with jq
     stats=$(_load_stats)
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
             if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
-                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" '
+                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" --argjson new_accuracy "$accuracy" '
                     .[$file] |= (
                         .cumulative.tests_taken += 1 |
                         .cumulative.wpm = ((.cumulative.wpm * (.cumulative.tests_taken - 1) + $new_wpm) / .cumulative.tests_taken) |
+                        .cumulative.accuracy = ((.cumulative.accuracy * (.cumulative.tests_taken - 1) + $new_accuracy) / .cumulative.tests_taken) |
                         .results += [$entry]
                     )
                 ' <<<"$stats")
             else
-                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" '
-                    . + {($file): {cumulative: {wpm: $new_wpm, tests_taken: 1}, results: [$entry]}}
+                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" --argjson new_accuracy "$accuracy" '
+                    . + {($file): {cumulative: {wpm: $new_wpm, accuracy: $new_accuracy, tests_taken: 1}, results: [$entry]}}
                 ' <<<"$stats")
             fi
         else
-            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
+            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
         fi
     else
         # Non-jq fallback (simple string concatenation, if jq isn't available)
         if [[ $stats == "{}" ]]; then
-            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
+            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
         else
-            stats="${stats/%\}/},\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
+            stats="${stats/%\}/},\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
         fi
     fi
 
@@ -218,7 +219,7 @@ function wpm_test() {
     local value_width=10
     local label_max_width=$((RESULT_TABLE_WIDTH - value_width - 5))
     local result_data=(
-        "$(printf ' %-*s %*s ' "$label_max_width" "Keystrokes" "$value_width" "$total_keystrokes")"
+        "$(printf ' %-*s %*s ' "$label_max_width" "Keystrokes" "$value_width" "$keystrokes")"
         "$(printf ' %-*s %*s ' "$label_max_width" "Accuracy" "$value_width" "$accuracy%")"
         "$(printf ' %-*s %*s ' "$label_max_width" "Correct" "$value_width" "$correct_words")"
         "$(printf ' %-*s %*s ' "$label_max_width" "Incorrect" "$value_width" "$incorrect_words")"
