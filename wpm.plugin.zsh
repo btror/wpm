@@ -178,7 +178,6 @@ function wpm_test() {
     wpm=$(((correct_words * 60) / elapsed_time))
     accuracy=$((correct_words * 100 / total_words))
 
-    # Save stats
     current_date=$(date +"%m/%d/%Y%l:%M%p")
     new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"keystrokes\":$total_keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 
@@ -187,18 +186,27 @@ function wpm_test() {
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
             if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
-                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" '.[$file] = [$entry] + .[$file]' <<<"$stats")
+                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" '
+                    .[$file] |= (
+                        .cumulative.tests_taken += 1 |
+                        .cumulative.wpm = ((.cumulative.wpm * (.cumulative.tests_taken - 1) + $new_wpm) / .cumulative.tests_taken) |
+                        .results += [$entry]
+                    )
+                ' <<<"$stats")
             else
-                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" '. + {($file): [$entry]}' <<<"$stats")
+                stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" '
+                    . + {($file): {cumulative: {wpm: $new_wpm, tests_taken: 1}, results: [$entry]}}
+                ' <<<"$stats")
             fi
         else
-            stats="{\"$WORD_LIST_FILE_NAME\": [$new_entry]}"
+            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
         fi
     else
+        # Non-jq fallback (simple string concatenation, if jq isn't available)
         if [[ $stats == "{}" ]]; then
-            stats="{\"$WORD_LIST_FILE_NAME\": [$new_entry]}"
+            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
         else
-            stats="${stats/%\}/}],\"$WORD_LIST_FILE_NAME\": [$new_entry]}"
+            stats="${stats/%\}/},\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
         fi
     fi
 
@@ -237,9 +245,9 @@ function wpm_history() {
 
         for file_name in $(echo "$stats" | jq -r 'keys[]'); do
             stats_array+=("-" "$(printf "$file_name")" "-")
-            entries=$(echo "$stats" | jq -c ".\"$file_name\"[]")
+            entries=$(echo "$stats" | jq -c ".\"$file_name\".results[]")
 
-            # Build each entry as an associative array and store it in stats_lists
+            # Process each entry in the results array for the current file
             while read -r entry; do
                 date=$(echo "$entry" | jq -r '.date')
                 wpm=$(echo "$entry" | jq -r '.wpm')
@@ -264,7 +272,7 @@ function wpm_history() {
 
             # Store the array in stats_lists
             stats_lists["$file_name"]="${stats_array[@]}"
-            done
+        done
 
         _draw_table 50 "${stats_array[@]}"
     else
