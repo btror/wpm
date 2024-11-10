@@ -38,7 +38,7 @@ function wpm_test() {
     fi
 
     # Update UI state
-    _update_state() {
+    update_state() {
         local is_correct="$1"
 
         # Handle word status and re-draw the table
@@ -68,23 +68,23 @@ function wpm_test() {
     }
 
     # Generate random word from the list
-    _generate_random_word() {
+    generate_random_word() {
         local random_index=$((($(od -An -N2 -i /dev/urandom) % (${#words[@]})) + 1))
         printf "%s\n" "${words[$random_index]}"
     }
 
     # Generate a list of random words
-    _generate_word_list() {
+    generate_word_list() {
         local count="$1"
         local word_list=()
         for i in {1..$count}; do
-            word_list+=("$(_generate_random_word)")
+            word_list+=("$(generate_random_word)")
         done
         printf "%s\n" "${word_list[@]}"
     }
 
     # Draw file selection menu
-    _list_files() {
+    list_files() {
         local files=()
         local numbered_files=()
         local index=1
@@ -115,9 +115,9 @@ function wpm_test() {
         done
     }
 
-    trap '_update_state -1' WINCH # Handle window resize
+    trap 'update_state -1' WINCH # Handle window resize
 
-    _list_files # Allow user to select word file
+    list_files # Allow user to select word file
 
     start_time=$(date +%s)
     end_time=$((start_time + test_duration))
@@ -127,7 +127,7 @@ function wpm_test() {
     total_keystrokes=0
 
     words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
-    word_list=($(_generate_word_list 20))
+    word_list=($(generate_word_list 20))
     word_list_top=("${word_list[@]:0:10}")
     word_list_bottom=("${word_list[@]:10}")
 
@@ -136,7 +136,7 @@ function wpm_test() {
     user_input=""
 
     tput civis # Hide cursor
-    _update_state 0
+    update_state 0
 
     # Main loop
     while [[ $(date +%s) -lt $end_time ]]; do
@@ -147,7 +147,7 @@ function wpm_test() {
 
         if [[ "$char" == $'\177' ]]; then # Backspace
             user_input=${user_input%?}
-            _update_state
+            update_state
         elif [[ "$char" == $'\040' ]]; then # Spacebar
             is_correct=1
             if [[ "$user_input" == "${word_list[$current_word_index]}" ]]; then
@@ -158,17 +158,17 @@ function wpm_test() {
             fi
 
             if [[ $current_word_index -ge 10 ]]; then
-                word_list=("${word_list[@]:10}" $(_generate_word_list 10 | cut -d' ' -f1-10))
+                word_list=("${word_list[@]:10}" $(generate_word_list 10 | cut -d' ' -f1-10))
                 word_list_top=("${word_list[@]:0:10}")
                 word_list_bottom=("${word_list[@]:10}")
                 current_word_index=0
             fi
             current_word_index=$((current_word_index + 1))
             user_input=""
-            _update_state $is_correct
+            update_state $is_correct
         else
             user_input+=$char
-            _update_state
+            update_state
         fi
     done
 
