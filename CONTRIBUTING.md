@@ -5,8 +5,6 @@ Welcome to wpm! We're thrilled that you're interested in contributing. Before yo
 ## Table of Contents
 
 - [How to Contribute](#how-to-contribute)
-- [Code Style and Guidelines](#code-style-and-guidelines)
-- [Data Model](#data-model)
 - [Reporting Issues](#reporting-issues)
 - [Issue Tracking](#issue-tracking)
 - [License](#license)
