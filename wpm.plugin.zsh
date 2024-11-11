@@ -28,8 +28,6 @@ source "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/wpm.utils.zsh"
 #
 function wpm_test() {
     local test_duration=${1:-60}  # Default to 60 if not provided
-    local start_time end_time elapsed_time correct_words incorrect_words keystrokes word_list
-    local word_list_top word_list_bottom current_word_index user_input stats wpm accuracy selection
 
     # Ensure all necessary parameters are provided
     if [[ -z "$_OMZ_WPM_PLUGIN_DIR" || -z "$test_duration" ]]; then
@@ -119,21 +117,21 @@ function wpm_test() {
 
     list_files # Allow user to select word file
 
-    start_time=$(date +%s)
-    end_time=$((start_time + test_duration))
+    local start_time=$(date +%s)
+    local end_time=$((start_time + test_duration))
 
-    correct_words=0
-    incorrect_words=0
-    keystrokes=0
+    local correct_words=0
+    local incorrect_words=0
+    local keystrokes=0
 
-    words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
-    word_list=($(generate_word_list 20))
-    word_list_top=("${word_list[@]:0:10}")
-    word_list_bottom=("${word_list[@]:10}")
+    local words=($(cat "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/$WORD_LIST_FILE_NAME"))
+    local word_list=($(generate_word_list 20))
+    local word_list_top=("${word_list[@]:0:10}")
+    local word_list_bottom=("${word_list[@]:10}")
 
-    current_word_index=1
+    local current_word_index=1
 
-    user_input=""
+    local user_input=""
 
     tput civis # Hide cursor
     update_state 0
@@ -173,16 +171,17 @@ function wpm_test() {
     done
 
     # Calculate stats
-    elapsed_time=$((end_time - start_time))
-    total_words=$((correct_words + incorrect_words))
-    wpm=$(((correct_words * 60) / elapsed_time))
-    accuracy=$((correct_words * 100 / total_words))
+    local elapsed_time=$((end_time - start_time))
+    local total_words=$((correct_words + incorrect_words))
+    local wpm=$(((correct_words * 60) / elapsed_time))
+    local accuracy=$((correct_words * 100 / total_words))
 
-    current_date=$(date +"%m/%d/%Y%l:%M%p")
-    new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"keystrokes\":$keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
+    local current_date=$(date +"%m/%d/%Y%l:%M%p")
+
+    local new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"keystrokes\":$keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 
     # Update stats logic with jq
-    stats=$(_load_history)
+    local stats=$(_load_history)
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
             # Check if the specified file already exists in the stats data
@@ -215,6 +214,7 @@ function wpm_test() {
     fi
 
     # Save stats
+    local stats_dir="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats"
     mkdir -p "$stats_dir"
     printf "%s" "$stats" >"$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
 
@@ -249,17 +249,18 @@ function wpm_history() {
 
         for file_name in $(echo "$stats" | jq -r 'keys[]'); do
             stats_array+=("-" "$(printf "$file_name")" "-")
-            entries=$(echo "$stats" | jq -c ".\"$file_name\".results[]")
+            # Get the entries for the current file in reverse order
+            local entries=$(echo "$stats" | jq -c ".\"$file_name\".results | reverse | .[]")
 
             # Process each entry in the results array for the current file
             while read -r entry; do
-                date=$(echo "$entry" | jq -r '.date')
-                wpm=$(echo "$entry" | jq -r '.wpm')
-                test_duration=$(echo "$entry" | jq -r '.["test duration"]')
-                keystrokes=$(echo "$entry" | jq -r '.keystrokes')
-                accuracy=$(echo "$entry" | jq -r '.accuracy')
-                correct=$(echo "$entry" | jq -r '.correct')
-                incorrect=$(echo "$entry" | jq -r '.incorrect')
+                local date=$(echo "$entry" | jq -r '.date')
+                local wpm=$(echo "$entry" | jq -r '.wpm')
+                local test_duration=$(echo "$entry" | jq -r '.["test duration"]')
+                local keystrokes=$(echo "$entry" | jq -r '.keystrokes')
+                local accuracy=$(echo "$entry" | jq -r '.accuracy')
+                local correct=$(echo "$entry" | jq -r '.correct')
+                local incorrect=$(echo "$entry" | jq -r '.incorrect')
 
                 stats_array+=(
                     ""
@@ -304,10 +305,10 @@ function wpm_stats() {
             stats_array+=("-" "$(printf "$file_name")" "-")
 
             # Extract stats for the current file
-            average_data=$(echo "$stats" | jq -c ".\"$file_name\"")
-            wpm=$(echo "$average_data" | jq -r '.wpm')
-            accuracy=$(echo "$average_data" | jq -r '.accuracy')
-            tests_taken=$(echo "$average_data" | jq -r '.["tests taken"]')
+            local average_data=$(echo "$stats" | jq -c ".\"$file_name\"")
+            local wpm=$(echo "$average_data" | jq -r '.wpm')
+            local accuracy=$(echo "$average_data" | jq -r '.accuracy')
+            local tests_taken=$(echo "$average_data" | jq -r '.["tests taken"]')
 
             # Add data to stats_array
             stats_array+=(
