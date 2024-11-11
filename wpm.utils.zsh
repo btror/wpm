@@ -31,7 +31,23 @@ _draw_table() {
     printf "$table"
 }
 
-# Load stats from the file
+# Load history
+_load_history() {
+    local stats_file="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+
+    if [[ ${#funcstack[@]} -le 1 ]]; then
+        echo "Warning: _load_history should not be called directly from the terminal."
+        return 1
+    fi
+
+    if [[ -f "$stats_file" ]]; then
+        jq '.' "$stats_file"
+    else
+        printf "{}"
+    fi
+}
+
+# load stats
 _load_stats() {
     local stats_file="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
 
@@ -41,7 +57,7 @@ _load_stats() {
     fi
 
     if [[ -f "$stats_file" ]]; then
-        jq '.' "$stats_file"
+        jq 'with_entries(.value |= .average)' "$stats_file"
     else
         printf "{}"
     fi

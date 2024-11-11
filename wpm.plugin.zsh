@@ -182,32 +182,32 @@ function wpm_test() {
     new_entry="{\"date\":\"$current_date\",\"wpm\":$wpm,\"test duration\":$test_duration,\"keystrokes\":$keystrokes,\"accuracy\":$accuracy,\"correct\":$correct_words,\"incorrect\":$incorrect_words}"
 
     # Update stats logic with jq
-    stats=$(_load_stats)
+    stats=$(_load_history)
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
             if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
                 stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" --argjson new_accuracy "$accuracy" '
                     .[$file] |= (
-                        .cumulative.tests_taken += 1 |
-                        .cumulative.wpm = ((.cumulative.wpm * (.cumulative.tests_taken - 1) + $new_wpm) / .cumulative.tests_taken) |
-                        .cumulative.accuracy = ((.cumulative.accuracy * (.cumulative.tests_taken - 1) + $new_accuracy) / .cumulative.tests_taken) |
+                        .average.["tests taken"] += 1 |
+                        .average.wpm = ((.average.wpm * (.average.["tests taken"] - 1) + $new_wpm) / .average.["tests taken"]) |
+                        .average.accuracy = ((.average.accuracy * (.average.["tests taken"] - 1) + $new_accuracy) / .average.["tests taken"]) |
                         .results += [$entry]
                     )
                 ' <<<"$stats")
             else
                 stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" --argjson new_accuracy "$accuracy" '
-                    . + {($file): {cumulative: {wpm: $new_wpm, accuracy: $new_accuracy, tests_taken: 1}, results: [$entry]}}
+                    . + {($file): {average: {wpm: $new_wpm, accuracy: $new_accuracy, tests taken: 1}, results: [$entry]}}
                 ' <<<"$stats")
             fi
         else
-            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
+            stats="{\"$WORD_LIST_FILE_NAME\": {\"average\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests taken\": 1}, \"results\": [$new_entry]}}"
         fi
     else
         # Non-jq fallback (simple string concatenation, if jq isn't available)
         if [[ $stats == "{}" ]]; then
-            stats="{\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
+            stats="{\"$WORD_LIST_FILE_NAME\": {\"average\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests taken\": 1}, \"results\": [$new_entry]}}"
         else
-            stats="${stats/%\}/},\"$WORD_LIST_FILE_NAME\": {\"cumulative\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests_taken\": 1}, \"results\": [$new_entry]}}"
+            stats="${stats/%\}/},\"$WORD_LIST_FILE_NAME\": {\"average\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests taken\": 1}, \"results\": [$new_entry]}}"
         fi
     fi
 
@@ -229,7 +229,7 @@ function wpm_test() {
     tput cnorm # Show cursor again
 }
 
-# Shows a list of results from the stats folder
+# Shows typing speed test history
 #
 # wpm_history
 #
@@ -237,7 +237,7 @@ function wpm_history() {
     local stats_file="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
 
     if [[ -f "$stats_file" ]]; then
-        local stats=$(_load_stats)
+        local stats=$(_load_history)
         local value_width=20
         local result_table_width=40
         local label_max_width=$((result_table_width - value_width - 5))
@@ -276,6 +276,49 @@ function wpm_history() {
         done
 
         _draw_table 50 "${stats_array[@]}"
+    else
+        echo "No history available."
+    fi
+}
+
+# Shows average results for each word list
+#
+# wpm_stats
+#
+function wpm_stats() {
+    local stats_file="$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/stats/stats.json"
+
+    if [[ -f "$stats_file" ]]; then
+        local stats=$(_load_stats)
+        local value_width=20
+        local result_table_width=50
+        local label_max_width=$((result_table_width - value_width - 5))
+        local stats_array=("Speed Stats" "═" "")
+        declare -A stats_lists
+
+        for file_name in $(echo "$stats" | jq -r 'keys[]'); do
+            # Print file name as a header
+            stats_array+=("-" "$(printf "$file_name")" "-")
+
+            # Extract stats for the current file
+            average_data=$(echo "$stats" | jq -c ".\"$file_name\"")
+            wpm=$(echo "$average_data" | jq -r '.wpm')
+            accuracy=$(echo "$average_data" | jq -r '.accuracy')
+            tests_taken=$(echo "$average_data" | jq -r '.["tests taken"]')
+
+            # Add data to stats_array
+            stats_array+=(
+                "$(printf ' %-*s %*s ' "$label_max_width" "Average WPM" "$value_width" "$wpm WPM")"
+                "$(printf ' %-*s %*s ' "$label_max_width" "Average Accuracy" "$value_width" "$accuracy%")"
+                "$(printf ' %-*s %*s ' "$label_max_width" "Tests Taken" "$value_width" "$tests_taken")"
+                ""
+            )
+
+            # Store the array in stats_lists
+            stats_lists["$file_name"]="${stats_array[@]}"
+        done
+
+        _draw_table "$result_table_width" "${stats_array[@]}"
     else
         echo "No stats available."
     fi
