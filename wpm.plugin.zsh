@@ -185,6 +185,7 @@ function wpm_test() {
     stats=$(_load_history)
     if command -v jq &>/dev/null; then
         if jq -e . >/dev/null 2>&1 <<<"$stats"; then
+            # Check if the specified file already exists in the stats data
             if jq -e ".\"$WORD_LIST_FILE_NAME\"" >/dev/null 2>&1 <<<"$stats"; then
                 stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" --argjson new_accuracy "$accuracy" '
                     .[$file] |= (
@@ -195,11 +196,13 @@ function wpm_test() {
                     )
                 ' <<<"$stats")
             else
+                # If the file is new, add it without altering existing data
                 stats=$(jq --arg file "$WORD_LIST_FILE_NAME" --argjson entry "$new_entry" --argjson new_wpm "$wpm" --argjson new_accuracy "$accuracy" '
-                    . + {($file): {average: {wpm: $new_wpm, accuracy: $new_accuracy, tests taken: 1}, results: [$entry]}}
+                    . + {($file): {average: {wpm: $new_wpm, accuracy: $new_accuracy, "tests taken": 1}, results: [$entry]}}
                 ' <<<"$stats")
             fi
         else
+            # Initialize stats with the first entry if stats file was empty or invalid
             stats="{\"$WORD_LIST_FILE_NAME\": {\"average\": {\"wpm\": $wpm, \"accuracy\": $accuracy, \"tests taken\": 1}, \"results\": [$new_entry]}}"
         fi
     else
