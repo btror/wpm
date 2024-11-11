@@ -26,7 +26,7 @@ sudo apt install jq
 ## Usage
 
 ### Functions
-Start a speed test via:
+Start a speed test:
 ```
 wpm_test
 ```
@@ -35,12 +35,17 @@ You can set a timer if you want (default is 60):
 wpm_test <seconds>
 ```
 
-View a list of speed test results via:
+View speed test result history:
 ```
 wpm_history
 ```
 
-<img src="demo2.gif" width="500" height="320">
+View average stats for every speed test:
+```
+wpm_stats
+```
+
+<img src="demo2.gif" width="500" height="310">
 
 ### Data
 
@@ -51,37 +56,51 @@ Select a word list txt file to use. Feel free to add your own lists in `wpm/list
 Test results are stored in `wpm/stats/stats.json` and are organized via file name.
 ```
 {
-  "words_top-250-english-easy.txt": [
-    {
-      "date": "11/03/2024 10:10PM",
-      "wpm": 77,
-      "test duration": 60,
-      "keystrokes": 406,
-      "accuracy": 96,
-      "correct": 77,
-      "incorrect": 3
-    },
-    {
-      "date": "11/03/2024 10:07PM",
-      "wpm": 4,
-      "test duration": 60,
-      "keystrokes": 29,
+  "words_top-250-english-adv.txt": {
+    "average": {
+      "wpm": 42,
       "accuracy": 100,
-      "correct": 4,
-      "incorrect": 0
-    }
-  ],
-  "words_top-250-english-adv.txt": [
-    {
-      "date": "11/03/2024 10:15PM",
-      "wpm": 30,
-      "test duration": 60,
-      "keystrokes": 275,
-      "accuracy": 83,
-      "correct": 30,
-      "incorrect": 6
-    }
-  ]
+      "tests taken": 1
+    },
+    "results": [
+      {
+        "date": "11/10/2024 9:12PM",
+        "wpm": 42,
+        "test duration": 10,
+        "keystrokes": 47,
+        "accuracy": 100,
+        "correct": 7,
+        "incorrect": 0
+      }
+    ]
+  },
+  "words_top-250-english-easy.txt": {
+    "average": {
+      "wpm": 69,
+      "accuracy": 84,
+      "tests taken": 2
+    },
+    "results": [
+      {
+        "date": "11/10/2024 9:16PM",
+        "wpm": 78,
+        "test duration": 10,
+        "keystrokes": 79,
+        "accuracy": 92,
+        "correct": 13,
+        "incorrect": 1
+      },
+      {
+        "date": "11/10/2024 9:17PM",
+        "wpm": 60,
+        "test duration": 10,
+        "keystrokes": 63,
+        "accuracy": 76,
+        "correct": 10,
+        "incorrect": 3
+      }
+    ]
+  }
 }
 ```
 </details>
