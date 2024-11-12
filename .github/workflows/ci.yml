@@ -49,7 +49,7 @@ jobs:
       - name: Create empty stats.json file
         run: |
           mkdir -p wpm/stats
-          echo "" > wpm/stats/stats.json
+          echo "{}" > wpm/stats/stats.json
 
       - name: Run wpm_test
         run: |
