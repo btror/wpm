@@ -45,7 +45,8 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y zsh jq
-          echo jq --version
+          echo "TESTING"
+          jq --version
 
       - name: Create empty stats.json file
         run: |
