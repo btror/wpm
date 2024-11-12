@@ -173,8 +173,14 @@ function wpm_test() {
     # Calculate stats
     local elapsed_time=$((end_time - start_time))
     local total_words=$((correct_words + incorrect_words))
-    local wpm=$(((correct_words * 60) / elapsed_time))
-    local accuracy=$((correct_words * 100 / total_words))
+    local wpm=0
+    if [[ $elapsed_time -gt 0 ]]; then
+        wpm=$(((correct_words * 60) / elapsed_time))
+    fi
+    local accuracy=0
+    if [[ $total_words -gt 0 ]]; then
+        accuracy=$((correct_words * 100 / total_words))
+    fi
 
     local current_date=$(date +"%m/%d/%Y%l:%M%p")
 

@@ -33,3 +33,33 @@ jobs:
       - name: Validate PR commits with commitlint
         if: github.event_name == 'pull_request'
         run: npx commitlint --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} --to ${{ github.event.pull_request.head.sha }} --verbose
+
+  wpm-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Set up Zsh
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y zsh jq
+
+      - name: Create empty stats.json file
+        run: |
+          mkdir -p wpm/stats
+          echo "" > wpm/stats/stats.json
+
+      - name: Run wpm_test
+        run: |
+          zsh -c 'source wpm.plugin.zsh && echo 3 | wpm_test 10'
+
+      - name: Compare stats.json to expected content
+        run: |
+          expected_content='{"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":10,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}'
+          actual_content=$(cat wpm/stats/stats.json)
+          if [ "$actual_content" != "$expected_content" ]; then
+            echo "stats.json content does not match expected content"
+            exit 1
+          fi
