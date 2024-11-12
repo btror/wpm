@@ -20,7 +20,7 @@ ZSH_CUSTOM="$HOME/.oh-my-zsh/custom"
 
 ### Required Packages
 ```
-sudo apt install jq
+sudo apt install jq>=1.7
 ```
 
 ## Usage
