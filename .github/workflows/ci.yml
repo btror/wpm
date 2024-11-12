@@ -53,7 +53,7 @@ jobs:
 
       - name: Run wpm_test
         run: |
-          zsh -c 'source wpm.plugin.zsh && echo 3 | wpm_test 10'
+          TERM=dumb zsh -c 'source wpm.plugin.zsh && echo 3 | wpm_test 10'
 
       - name: Compare stats.json to expected content
         run: |
