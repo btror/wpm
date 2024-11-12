@@ -46,6 +46,8 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y zsh
           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.bashrc
+          eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"
           brew install jq@1.7
           echo "TESTING"
           jq --version
