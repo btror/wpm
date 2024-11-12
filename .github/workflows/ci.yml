@@ -41,10 +41,11 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set up Zsh
+      - name: Set up Zsh and jq
         run: |
           sudo apt-get update
-          sudo apt-get install -y zsh jq
+          sudo apt-get install -y zsh
+          brew install jq@1.7
           echo "TESTING"
           jq --version
 
