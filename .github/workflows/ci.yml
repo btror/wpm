@@ -60,7 +60,7 @@ jobs:
           echo "{}" > wpm/stats/stats.json
 
       - name: Run wpm_test
-        run: TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-adv.txt -d 10"
+        run: TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 10"
 
         # run: |
         #   TERM=dumb zsh <<EOF
