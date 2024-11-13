@@ -53,26 +53,34 @@ jobs:
           brew install jq
           echo "TESTING"
           jq --version
-
-      - name: Create empty stats.json file
-        run: |
           mkdir -p wpm/stats
           echo "{}" > wpm/stats/stats.json
-
-      - name: Run wpm_test
-        run: |
-          jq --version
           TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 10"
+          expected_content='{"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":10,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}'
+          actual_content=$(cat wpm/stats/stats.json)
+          if [ "$actual_content" != "$expected_content" ]; then
+            echo "stats.json content does not match expected content"
+            exit 1
+
+      # - name: Create empty stats.json file
+      #   run: |
+      #     mkdir -p wpm/stats
+      #     echo "{}" > wpm/stats/stats.json
+
+      # - name: Run wpm_test
+      #   run: |
+      #     jq --version
+      #     TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 10"
 
         # run: |
         #   TERM=dumb zsh <<EOF
         #   source wpm.plugin.zsh | wpm_test -f words_top-250-english-adv.txt -d 10
         #   EOF
 
-      - name: Compare stats.json to expected content
-        run: |
-          expected_content='{"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":10,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}'
-          actual_content=$(cat wpm/stats/stats.json)
-          if [ "$actual_content" != "$expected_content" ]; then
-            echo "stats.json content does not match expected content"
-            exit 1
+      # - name: Compare stats.json to expected content
+      #   run: |
+      #     expected_content='{"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":10,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}'
+      #     actual_content=$(cat wpm/stats/stats.json)
+      #     if [ "$actual_content" != "$expected_content" ]; then
+      #       echo "stats.json content does not match expected content"
+      #       exit 1
