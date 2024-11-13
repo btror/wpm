@@ -135,6 +135,7 @@ function wpm_test() {
 
     tput civis # Hide cursor
     update_state 0
+    stty -echo
 
     # Main loop
     while [[ $(date +%s) -lt $end_time ]]; do
@@ -169,6 +170,8 @@ function wpm_test() {
             update_state
         fi
     done
+
+    stty echo
 
     # Calculate stats
     local elapsed_time=$((end_time - start_time))
