@@ -61,6 +61,7 @@ jobs:
           if [ "$actual_content" != "$expected_content" ]; then
             echo "stats.json content does not match expected content"
             exit 1
+          fi
 
       # - name: Create empty stats.json file
       #   run: |
