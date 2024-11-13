@@ -62,8 +62,7 @@ jobs:
       - name: Run wpm_test
         run: |
           TERM=dumb zsh <<EOF
-          source wpm.plugin.zsh
-          echo 3 | wpm_test 10
+          source wpm.plugin.zsh | wpm_test -f words_top-250-english-adv.txt -d 10
           EOF
 
       - name: Compare stats.json to expected content

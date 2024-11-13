@@ -27,13 +27,17 @@ source "$(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/wpm.utils.zsh"
 # wpm_test <seconds>
 #
 function wpm_test() {
-    local test_duration=${1:-60}  # Default to 60 if not provided
+    local test_duration=60
+    local filename=""
 
-    # Ensure all necessary parameters are provided
-    if [[ -z "$_OMZ_WPM_PLUGIN_DIR" || -z "$test_duration" ]]; then
-        echo "Usage: $_OMZ_WPM_PLUGIN_DIR test_duration"
-        exit 1
-    fi
+    # Parse flags using getopts
+    while getopts "d:f:" opt; do
+        case $opt in
+            d) test_duration=$OPTARG ;;   # -d for duration
+            f) filename=$OPTARG ;;        # -f for filename
+            \?) echo "Usage: wpm_test [-d duration] [-f filename]"; return 1 ;;  # Handle invalid options
+        esac
+    done
 
     # Update UI state
     update_state() {
@@ -90,8 +94,8 @@ function wpm_test() {
 
         for file in $(dirname "$_OMZ_WPM_PLUGIN_DIR")/wpm/lists/*.txt; do
             files+=("$(basename "$file")")
-            local filename="$(basename "$file")"
-            numbered_files+=("$(printf "%-5s %*s" "$index." "$((FILE_SELECTION_TABLE_WIDTH - 10))" "$filename")")
+            local filename_option="$(basename "$file")"
+            numbered_files+=("$(printf "%-5s %*s" "$index." "$((FILE_SELECTION_TABLE_WIDTH - 10))" "$filename_option")")
             ((index++))
         done
 
@@ -115,7 +119,11 @@ function wpm_test() {
 
     trap 'update_state -1' WINCH # Handle window resize
 
-    list_files # Allow user to select word file
+    if [[ -n "$filename" ]]; then
+        WORD_LIST_FILE_NAME="$filename"
+    else
+        list_files # Allow user to select word file
+    fi
 
     local start_time=$(date +%s)
     local end_time=$((start_time + test_duration))
@@ -135,7 +143,9 @@ function wpm_test() {
 
     tput civis # Hide cursor
     update_state 0
-    stty -echo
+    if [[ -t 0 && ! -z "$PS1" ]]; then
+        stty -echo
+    fi
 
     # Main loop
     while [[ $(date +%s) -lt $end_time ]]; do
@@ -171,7 +181,9 @@ function wpm_test() {
         fi
     done
 
-    stty echo
+    if [[ -t 0 && ! -z "$PS1" ]]; then
+        stty echo
+    fi
 
     # Calculate stats
     local elapsed_time=$((end_time - start_time))
