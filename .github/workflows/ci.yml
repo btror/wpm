@@ -55,8 +55,8 @@ jobs:
           jq --version
           mkdir -p wpm/stats
           echo "{}" > wpm/stats/stats.json
-          TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 10"
-          expected_content='{"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":10,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}'
+          TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
+          expected_content='{"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":0,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}'
           actual_content=$(cat wpm/stats/stats.json)
           if [ "$actual_content" != "$expected_content" ]; then
             echo "stats.json content does not match expected content"
