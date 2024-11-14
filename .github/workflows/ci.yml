@@ -61,7 +61,7 @@ jobs:
           echo "EXPECTED CONTENT"
           echo "$expected_content"
           echo "ACTUAL CONTENT"
-          ehco "$actual_content"
+          echo "$actual_content"
           if [ "$actual_content" != "$expected_content" ]; then
             echo "stats.json content does not match expected content"
             exit 1
