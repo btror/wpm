@@ -48,10 +48,19 @@ jobs:
           set -e
           sudo apt-get update
           sudo apt-get install -y zsh
-          /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
-          echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.zshrc
-          source /home/runner/.zshrc
-          brew install jq
+          # /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+          # echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.zshrc
+          # source /home/runner/.zshrc
+          # brew install jq
+    
+      - name: Install jq 1.7+ from binary
+        run: |
+          curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux64
+          chmod +x jq
+          sudo mv jq /usr/local/bin/jq
+
+      - name: Verify jq Version
+        run: jq --version
 
       - name: Run WPM Test
         run: |
