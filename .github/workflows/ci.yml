@@ -52,7 +52,7 @@ jobs:
           chmod +x jq
           sudo mv jq /usr/local/bin/jq
 
-      - name: Run wpm_test tests
+      - name: Run wpm_test test
         run: |
           TERM=xterm zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
 
