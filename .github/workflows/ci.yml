@@ -56,7 +56,7 @@ jobs:
           jq --version
           mkdir -p wpm/stats
           echo "{}" > wpm/stats/stats.json
-          TERM=dumb zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
+          TERM=xterm zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
           expected_content=$(cat <<EOF
           {
             "words_top-250-english-easy.txt": {
