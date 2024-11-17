@@ -52,11 +52,18 @@ jobs:
           echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.zshrc
           source /home/runner/.zshrc
           brew install jq
+
+      - name: Run WPM Test
+        run: |
           echo "TESTING"
           jq --version
           TERM=xterm zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
+
+      - name: Validate stats.json Output
+        run: |
           expected_content=$(cat <<EOF
           {"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":0,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}
+
           EOF
           )
           actual_content=$(cat stats/stats.json)
@@ -68,3 +75,75 @@ jobs:
             echo "stats.json content does not match expected content"
             exit 1
           fi
+
+
+# name: CI
+
+# on:
+#   push:
+#     branches:
+#       - master
+#   pull_request:
+
+# jobs:
+#   commitlint:
+#     runs-on: ubuntu-22.04
+#     steps:
+#       - uses: actions/checkout@v3
+#         with:
+#           fetch-depth: 0
+
+#       - name: Set up Node.js
+#         uses: actions/setup-node@v3
+#         with:
+#           node-version: '20'
+
+#       - name: Install required dependencies
+#         run: |
+#           npm install @commitlint/config-conventional commitlint@latest --save-dev
+
+#       - name: Print versions
+#         run: |
+#           git --version
+#           node --version
+#           npm --version
+#           npx commitlint --version
+
+#       - name: Validate first commit with commitlint
+#         if: github.event_name == 'push' || github.event_name == 'pull_request'
+#         run: |
+#           first_commit=$(git rev-list --max-parents=0 HEAD)
+#           git log -1 $first_commit --pretty=format:%B | npx commitlint
+
+#   wpm-test:
+#     runs-on: ubuntu-22.04
+#     steps:
+#       - uses: actions/checkout@v3
+#         with:
+#           fetch-depth: 0
+
+#       - name: Install required dependencies
+#         run: |
+#           set -e
+#           sudo apt-get update
+#           sudo apt-get install -y zsh
+#           /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+#           echo 'eval "$(/home/linuxbrew/.linuxbrew/bin/brew shellenv)"' >> /home/runner/.zshrc
+#           source /home/runner/.zshrc
+#           brew install jq
+#           echo "TESTING"
+#           jq --version
+#           TERM=xterm zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
+#           expected_content=$(cat <<EOF
+#           {"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":0,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}
+#           EOF
+#           )
+#           actual_content=$(cat stats/stats.json)
+#           echo "\nEXPECTED CONTENT"
+#           echo "$expected_content"
+#           echo "ACTUAL CONTENT"
+#           echo "$actual_content"
+#           if [ "$actual_content" != "$expected_content" ]; then
+#             echo "stats.json content does not match expected content"
+#             exit 1
+#           fi
