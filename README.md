@@ -32,7 +32,11 @@ wpm_test
 ```
 You can set a timer if you want (default is 60):
 ```
-wpm_test <seconds>
+wpm_test -d <seconds>
+```
+Specify a word list file to use (otherwise the file selection menu appears):
+```
+wpm_test -f <filename>
 ```
 
 View speed test result history:
