@@ -54,8 +54,8 @@ jobs:
           brew install jq
           echo "TESTING"
           jq --version
-          mkdir -p wpm/stats
-          echo "{}" > wpm/stats/stats.json
+          # mkdir -p wpm/stats
+          # echo "{}" > stats/stats.json
           TERM=xterm zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
           expected_content=$(cat <<EOF
           {
@@ -80,13 +80,13 @@ jobs:
           }
           EOF
           )
-          actual_content=$(cat wpm/stats/stats.json)
+          actual_content=$(cat stats/stats.json)
           echo "EXPECTED CONTENT"
           echo "$expected_content"
           echo "ACTUAL CONTENT"
-          echo "Contents of stats.json:"
-          cat wpm/stats/stats.json
           echo "$actual_content"
+          echo "Contents of stats.json:"
+          cat stats/stats.json
           ls -a
           echo "specific stuff"
           ls stats
