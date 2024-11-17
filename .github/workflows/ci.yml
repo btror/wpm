@@ -92,6 +92,8 @@ jobs:
           ls stats
           echo "more shit"
           ls wpm
+          echo "hmmm"
+          cat stats/stats.json 
           # if [ "$actual_content" != "$expected_content" ]; then
           #   echo "stats.json content does not match expected content"
           #   exit 1
