@@ -87,6 +87,7 @@ jobs:
           echo "Contents of stats.json:"
           cat wpm/stats/stats.json
           echo "$actual_content"
+          ls -a
           # if [ "$actual_content" != "$expected_content" ]; then
           #   echo "stats.json content does not match expected content"
           #   exit 1
