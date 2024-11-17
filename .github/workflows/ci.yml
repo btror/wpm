@@ -67,7 +67,7 @@ jobs:
               },
               "results": [
                 {
-                  "date": "$(date +"%m/%d/%Y %l:%M%p")",
+                  "date": "$(date +"%m/%d/%Y%l:%M%p")",
                   "wpm": 0,
                   "test duration": 0,
                   "keystrokes": 0,
