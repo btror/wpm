@@ -83,6 +83,8 @@ jobs:
           echo "EXPECTED CONTENT"
           echo "$expected_content"
           echo "ACTUAL CONTENT"
+          echo "Contents of stats.json:"
+          cat wpm/stats/stats.json
           echo "$actual_content"
           if [ "$actual_content" != "$expected_content" ]; then
             echo "stats.json content does not match expected content"
