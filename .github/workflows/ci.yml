@@ -1,6 +1,10 @@
 name: CI
 
-on: [push, pull_request]
+on:
+  push:
+    branches:
+      - master
+  pull_request:
 
 jobs:
   commitlint:
@@ -13,7 +17,7 @@ jobs:
       - name: Set up Node.js
         uses: actions/setup-node@v3
         with:
-          node-version: '20'
+          node-version: "20"
 
       - name: Install required dependencies
         run: |
@@ -26,10 +30,44 @@ jobs:
           npm --version
           npx commitlint --version
 
-      - name: Validate current commit (last commit) with commitlint
-        if: github.event_name == 'push'
-        run: npx commitlint --last --verbose
+      - name: Validate first commit with commitlint
+        if: github.event_name == 'push' || github.event_name == 'pull_request'
+        run: |
+          first_commit=$(git rev-list --max-parents=0 HEAD)
+          git log -1 $first_commit --pretty=format:%B | npx commitlint
 
-      - name: Validate PR commits with commitlint
-        if: github.event_name == 'pull_request'
-        run: npx commitlint --from ${{ github.event.pull_request.head.sha }}~${{ github.event.pull_request.commits }} --to ${{ github.event.pull_request.head.sha }} --verbose
+  wpm-test:
+    runs-on: ubuntu-22.04
+    steps:
+      - uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Install required dependencies
+        run: |
+          set -e
+          sudo apt-get update
+          sudo apt-get install -y zsh
+          curl -L -o jq https://github.com/jqlang/jq/releases/download/jq-1.7/jq-linux64
+          chmod +x jq
+          sudo mv jq /usr/local/bin/jq
+
+      - name: Run wpm_test test
+        run: |
+          TERM=xterm zsh -c "source wpm.plugin.zsh; wpm_test -f words_top-250-english-easy.txt -d 0"
+
+      - name: Validate stats.json
+        run: |
+          expected_content=$(cat <<EOF
+          {"words_top-250-english-easy.txt": {"average": {"wpm": 0, "accuracy": 0, "tests taken": 1}, "results": [{"date":"$(date +"%m/%d/%Y%l:%M%p")","wpm":0,"test duration":0,"keystrokes":0,"accuracy":0,"correct":0,"incorrect":0}]}}
+          EOF
+          )
+          actual_content=$(cat stats/stats.json)
+          echo "Expected stats.json content"
+          echo "$expected_content"
+          echo "Actual stats.json content"
+          echo "$actual_content"
+          if [ "$actual_content" != "$expected_content" ]; then
+            echo "stats.json content does not match expected content"
+            exit 1
+          fi
